@@ -1,5 +1,4 @@
 // api/chat.js
-import { GoogleGenAI } from '@google/genai';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -18,27 +17,29 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Chave API não configurada.' });
     }
 
-    // Inicializa o cliente oficial da Google AI
-    const ai = new GoogleGenAI({ apiKey });
+    // Utiliza o modelo atualizado gemini-2.0-flash que é o padrão ativo nas novas contas
+    const modelName = "gemini-2.0-flash";
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-    // Converte o histórico para o formato esperado pelo SDK
-    const contents = history.map(item => ({
-      role: item.role === 'model' ? 'model' : 'user',
-      parts: [{ text: item.parts?.[0]?.text || '' }]
-    }));
-
-    // Utiliza o modelo standard recomendado pela Google
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
-      contents: contents,
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: history })
     });
 
-    const responseText = response.text || "Sem resposta.";
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error(`ERRO DO GOOGLE (Status ${response.status}):`, errorData);
+      return res.status(response.status).json({ error: 'A API do Google falhou.' });
+    }
+
+    const data = await response.json();
+    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta.";
 
     return res.status(200).json({ text: responseText });
 
   } catch (error) {
-    console.error("Erro na API do Google:", error);
-    return res.status(500).json({ error: 'Erro ao comunicar com o assistente.' });
+    console.error("Erro interno no servidor:", error);
+    return res.status(500).json({ error: 'Falha interna.' });
   }
 }
