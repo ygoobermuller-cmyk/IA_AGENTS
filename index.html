@@ -61,11 +61,13 @@
         .message.user { background: var(--bg-panel); border: 1px solid var(--border-color); color: #e4e4e7; border-bottom-right-radius: 4px; }
         .message.bot { background: transparent; color: #f4f4f5; width: 100%; }
 
-        .welcome-hero { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; color: var(--text-secondary); animation: fadeIn 0.5s ease; }
+        /* Nova Animação do Welcome Hero e Botões */
+        .welcome-hero { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; color: var(--text-secondary); animation: fadeIn 0.4s ease; }
         .welcome-hero h2 { font-size: 24px; color: #fff; margin-bottom: 10px; }
-        .quick-actions { display: flex; gap: 12px; margin-top: 30px; flex-wrap: wrap; justify-content: center; }
-        .quick-btn { background: var(--bg-panel); border: 1px solid var(--border-color); color: var(--text-secondary); padding: 10px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: 0.2s; }
-        .quick-btn:hover { border-color: var(--accent-blue); color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59,130,246,0.1); }
+        .welcome-hero p { font-size: 14px; margin-bottom: 24px; }
+        .quick-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; max-width: 650px; }
+        .quick-btn { background: var(--bg-panel); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px 18px; border-radius: 10px; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; flex: 1; min-width: 250px; justify-content: center;}
+        .quick-btn:hover { border-color: var(--accent-blue); background: rgba(59, 130, 246, 0.05); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59,130,246,0.15); color: #fff;}
 
         .typing-indicator { display: flex; gap: 4px; padding: 16px 20px; align-items: center; }
         .typing-indicator span { width: 6px; height: 6px; background-color: var(--accent-blue); border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
@@ -170,7 +172,7 @@
                 <div class="code-wrapper">
                     <div class="code-header">
                         <div class="mac-dots"><span class="red"></span><span class="yellow"></span><span class="green"></span></div>
-                        <span class="code-lang">${lang || 'TEXT'}</span>
+                        <span class="code-lang">${lang || 'CODE'}</span>
                         <button class="copy-btn" onclick="copyCode(this, \`${codeContent.replace(/`/g, '\\`')}\`)">Copiar</button>
                     </div>
                     <pre><code>${codeContent}</code></pre>
@@ -186,9 +188,28 @@
         }
 
         const personas = {
-            "Geral": "És um assistente corporativo versátil, especialista em produtividade e análise analítica. Respostas diretas e limpas.",
+            "Geral": "És um assistente corporativo versátil, especialista em produtividade e análise. Respostas diretas e limpas.",
             "Sistemas": "És um engenheiro sénior de infraestrutura e sistemas empresariais. Especialista em SAP S/4HANA, Salesforce e Senior HCM. Responde de forma estruturada e altamente técnica.",
-            "Dev": "És um Arquiteto de Software Sénior. Especialista em Node.js, arquitetura Serverless (Vercel) e integrações. Gera código ultra limpo, moderno e comentado."
+            "Dev": "És um Arquiteto de Software Sénior. Especialista em Node.js, Vercel, MCP (Model Context Protocol) e APIs. Gera código limpo."
+        };
+
+        // Banco de Prompts Dinâmicos por Agente
+        const dynamicPrompts = {
+            "Geral": [
+                { icon: "📝", text: "Redigir e-mail formal", prompt: "Ajuda-me a escrever um e-mail corporativo comunicando uma atualização agendada na infraestrutura do sistema." },
+                { icon: "📊", text: "Resumir ficheiro", prompt: "Podes extrair os pontos mais importantes e resumir os dados se eu te fornecer um ficheiro ou log longo?" },
+                { icon: "🗓️", text: "Estruturar Tarefas", prompt: "Cria um plano de ação estruturado com prioridades para a migração de um novo sistema na empresa." }
+            ],
+            "Sistemas": [
+                { icon: "⚡", text: "Otimizar Processo SAP", prompt: "Gostaria de criar uma proposta para otimizar pagamentos manuais usando a transação FV60 no SAP. Ajuda-me a estruturar a ideia." },
+                { icon: "☁️", text: "Query Salesforce (SOQL)", prompt: "Cria uma query SOQL no Salesforce para extrair todos os utilizadores inativos no último trimestre." },
+                { icon: "🔍", text: "Diagnóstico Senior HCM", prompt: "Estou a rever tabelas no banco de dados do Senior Sistemas. Que boas práticas recomendas para extrair relatórios sem afetar a performance?" }
+            ],
+            "Dev": [
+                { icon: "🔌", text: "Estrutura MCP Server", prompt: "Gera a estrutura base de um servidor MCP (Model Context Protocol) em Node.js para ligar o nosso sistema a uma LLM local." },
+                { icon: "⚙️", text: "Lógica Power Automate", prompt: "Ajuda-me a criar uma lógica avançada no Microsoft Power Automate para aprovação de ficheiros recebidos por e-mail." },
+                { icon: "🐛", text: "Depurar Código JS", prompt: "Tenho um script Javascript/Node.js que está a dar timeout na Vercel. Podes analisar o código se eu o colar abaixo?" }
+            ]
         };
 
         let sessions = JSON.parse(localStorage.getItem('gemini_final_sessions') || '[]');
@@ -207,7 +228,7 @@
 
         function newChat() {
             const id = 'ws_' + Date.now();
-            sessions.unshift({ id, title: 'Novo Workspace', agent: 'Geral', history: [] });
+            sessions.unshift({ id, title: 'Novo Workspace', agent: document.getElementById('agent-select').value || 'Geral', history: [] });
             loadSession(id);
         }
 
@@ -217,27 +238,37 @@
             if(s) { s.history = []; save(); loadSession(activeId); }
         }
 
+        function renderWelcomeScreen(agent) {
+            const msgDiv = document.getElementById('chat-messages');
+            const prompts = dynamicPrompts[agent];
+            
+            let html = `
+                <div class="welcome-hero">
+                    <h2>Workspace: ${agent}</h2>
+                    <p>Módulo carregado com sucesso. Como posso otimizar a sua operação hoje?</p>
+                    <div class="quick-actions">`;
+            
+            prompts.forEach(p => {
+                // Escapar aspas simples no prompt para evitar erros de JS inline
+                const safePrompt = p.prompt.replace(/'/g, "\\'");
+                html += `<button class="quick-btn" onclick="setPrompt('${safePrompt}')">${p.icon} ${p.text}</button>`;
+            });
+
+            html += `</div></div>`;
+            msgDiv.innerHTML = html;
+        }
+
         function loadSession(id) {
             activeId = id;
             const s = sessions.find(s => s.id === id) || sessions[0];
             document.getElementById('agent-select').value = s.agent;
             document.getElementById('chat-title').innerText = s.title;
             
-            const msgDiv = document.getElementById('chat-messages');
-            msgDiv.innerHTML = '';
-
             if (s.history.length === 0) {
-                msgDiv.innerHTML = `
-                    <div class="welcome-hero">
-                        <h2>Como posso otimizar o seu fluxo hoje?</h2>
-                        <p>Selecione uma ação rápida ou digite abaixo.</p>
-                        <div class="quick-actions">
-                            <button class="quick-btn" onclick="setPrompt('Gostaria de otimizar um script Javascript. Podes rever o meu código se eu colar abaixo?')">💻 Otimizar Script</button>
-                            <button class="quick-btn" onclick="setPrompt('Estou a ter um erro de integração no SAP. Que passos de diagnóstico recomendas?')">⚙️ Diagnóstico SAP</button>
-                            <button class="quick-btn" onclick="setPrompt('Ajuda-me a escrever um e-mail formal para a equipa sobre a nova atualização de infraestrutura.')">📝 Redigir E-mail</button>
-                        </div>
-                    </div>`;
+                renderWelcomeScreen(s.agent);
             } else {
+                const msgDiv = document.getElementById('chat-messages');
+                msgDiv.innerHTML = '';
                 s.history.forEach(m => renderMessage(m.parts[0].text, m.role, false));
             }
             save(); renderList();
@@ -245,12 +276,17 @@
 
         function setPrompt(text) {
             document.getElementById('user-input').value = text;
+            autoResize(document.getElementById('user-input'));
             document.getElementById('user-input').focus();
         }
 
         function updateSession() {
             const s = sessions.find(s => s.id === activeId);
             s.agent = document.getElementById('agent-select').value;
+            // Se o chat estiver vazio, atualiza o ecrã de boas-vindas com os novos prompts dinâmicos
+            if (s.history.length === 0) {
+                renderWelcomeScreen(s.agent);
+            }
             save();
         }
 
@@ -304,8 +340,6 @@
             }
 
             renderMessage(text, 'user');
-            
-            // Só guarda a mensagem temporariamente na UI
             const tempHistory = [...s.history, { role: 'user', parts: [{ text }] }];
             
             input.value = ''; input.style.height = 'auto'; clearFile();
@@ -322,7 +356,6 @@
                 document.getElementById(loadId).remove();
                 
                 if (res.ok) {
-                    // SÓ GRAVA DEFINITIVAMENTE SE A API FUNCIONAR
                     s.history = tempHistory;
                     s.history.push({ role: 'model', parts: [{ text: data.text }] });
                     renderMessage(data.text, 'bot');
