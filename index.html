@@ -3,394 +3,264 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Multi-Agent Enterprise Workspace</title>
-    <!-- Marked.js para renderização de Markdown e código -->
+    <title>AI Workspace Pro</title>
+    <!-- Marked.js para Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- html2pdf para exportar PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
-            --bg-main: #07090e;
-            --bg-sidebar: #0d1117;
-            --bg-panel: #161b22;
-            --border-color: #21262d;
-            --text-primary: #e6edf3;
-            --text-secondary: #8b949e;
-            --accent-blue: #2f81f7;
-            --accent-hover: #388bfd;
-            --user-bubble: #1f6feb22;
-            --bot-bubble: #161b22;
+            --bg-main: #07090e; --bg-sidebar: #0d1117; --bg-panel: #161b22;
+            --border-color: #21262d; --text-primary: #e6edf3; --text-secondary: #8b949e;
+            --accent-blue: #2f81f7; --accent-hover: #388bfd;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
         body { background-color: var(--bg-main); color: var(--text-primary); height: 100vh; display: flex; overflow: hidden; }
 
-        /* Sidebar Avançada */
-        .sidebar { width: 300px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 16px; gap: 16px; }
-        .sidebar-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); }
-        .sidebar-header h1 { font-size: 15px; font-weight: 600; color: #fff; display: flex; align-items: center; gap: 8px; }
+        /* Sidebar */
+        .sidebar { width: 320px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 16px; gap: 16px; }
+        .sidebar-header h1 { font-size: 16px; font-weight: 600; color: #fff; }
+        
+        .btn-primary { background: var(--accent-blue); color: white; border: none; border-radius: 8px; padding: 10px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-primary:hover { background: var(--accent-hover); }
 
-        /* Botão Novo Chat */
-        .new-chat-btn { background: var(--accent-blue); color: white; border: none; border-radius: 8px; padding: 10px 14px; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; }
-        .new-chat-btn:hover { background: var(--accent-hover); }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; }
+        .select-box { background: var(--bg-panel); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px; font-size: 13px; outline: none; cursor: pointer; }
 
-        /* Seletor de Agente */
-        .agent-selector-container { display: flex; flex-direction: column; gap: 6px; }
-        .agent-selector-container label { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
-        .agent-select { background: var(--bg-panel); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; font-size: 13px; outline: none; cursor: pointer; }
-        .agent-select:focus { border-color: var(--accent-blue); }
+        .history-section { flex: 1; overflow-y: auto; margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+        .chat-item { padding: 10px; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center; }
+        .chat-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+        .chat-item.active { background: #1f6feb33; color: #58a6ff; border: 1px solid #1f6feb66; }
+        .delete-btn { color: #f85149; font-size: 12px; cursor: pointer; opacity: 0; }
+        .chat-item:hover .delete-btn { opacity: 1; }
 
-        /* Lista de Chats Anteriores */
-        .history-section { flex: 1; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; margin-top: 8px; }
-        .history-section h3 { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-        .chat-history-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; justify-content: space-between; transition: all 0.2s; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
-        .chat-history-item:hover { background-color: rgba(255,255,255,0.03); color: var(--text-primary); }
-        .chat-history-item.active { background-color: #1f6feb33; color: #58a6ff; font-weight: 500; border: 1px solid #1f6feb66; }
-        .delete-chat { opacity: 0; color: #f85149; font-size: 12px; padding: 2px 6px; border-radius: 4px; }
-        .chat-history-item:hover .delete-chat { opacity: 1; }
-        .delete-chat:hover { background: rgba(248,81,73,0.2); }
-
-        /* Main Chat Area */
-        .chat-container { flex: 1; display: flex; flex-direction: column; height: 100vh; background-color: var(--bg-main); }
+        /* Chat Area */
+        .chat-container { flex: 1; display: flex; flex-direction: column; background-color: var(--bg-main); }
         .chat-header { padding: 16px 24px; background-color: var(--bg-sidebar); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-        .chat-header-info { display: flex; flex-direction: column; gap: 2px; }
-        .chat-header-title { font-weight: 600; font-size: 14px; color: #fff; }
-        .chat-header-subtitle { font-size: 12px; color: var(--text-secondary); }
+        .header-actions { display: flex; gap: 10px; }
+        .btn-export { background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: 0.2s;}
+        .btn-export:hover { border-color: var(--text-primary); color: var(--text-primary); }
 
-        .chat-messages { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; scroll-behavior: smooth; }
-        .message { max-width: 75%; padding: 14px 18px; border-radius: 12px; font-size: 14px; line-height: 1.6; word-break: break-word; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .chat-messages { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+        .message { max-width: 80%; padding: 14px 18px; border-radius: 12px; font-size: 14px; line-height: 1.6; }
         .message.user { background-color: #1f242c; align-self: flex-end; border: 1px solid var(--border-color); }
-        .message.bot { background-color: var(--bg-panel); align-self: flex-start; border: 1px solid var(--border-color); }
+        .message.bot { background-color: var(--bg-panel); align-self: flex-start; border: 1px solid var(--border-color); width: 100%; }
         
-        /* Estilização Markdown */
-        .message.bot p { margin-bottom: 10px; }
-        .message.bot p:last-child { margin-bottom: 0; }
-        .message.bot pre { background: #030712; padding: 12px; border-radius: 6px; margin: 10px 0; overflow-x: auto; border: 1px solid var(--border-color); }
-        .message.bot code { font-family: monospace; font-size: 13px; color: #79c0ff; background: rgba(110,118,129,0.2); padding: 2px 4px; border-radius: 4px; }
-        .message.bot pre code { background: transparent; padding: 0; color: #e6edf3; }
-        .message.bot ul, .message.bot ol { margin-left: 20px; margin-bottom: 10px; }
-
+        /* Markdown & Code Copy */
+        .code-wrapper { position: relative; margin: 12px 0; background: #030712; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
+        .code-header { display: flex; justify-content: space-between; background: #161b22; padding: 6px 12px; border-bottom: 1px solid var(--border-color); }
+        .copy-btn { background: transparent; border: none; color: #8b949e; cursor: pointer; font-size: 12px; transition: color 0.2s; }
+        .copy-btn:hover { color: #58a6ff; }
+        .code-wrapper pre { margin: 0; padding: 12px; overflow-x: auto; }
+        .code-wrapper code { font-family: monospace; font-size: 13px; color: #79c0ff; }
+        
         /* Input Area */
-        .chat-input-area { padding: 20px 24px; background-color: var(--bg-sidebar); border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px; }
-        
-        #preview-container { display: none; align-items: center; gap: 10px; background: var(--bg-panel); padding: 6px 10px; border-radius: 6px; width: fit-content; font-size: 12px; border: 1px solid var(--border-color); }
-        #preview-container img { width: 30px; height: 30px; object-fit: cover; border-radius: 4px; }
-        #remove-file { color: #f85149; cursor: pointer; font-weight: bold; }
-
-        .input-wrapper { display: flex; align-items: center; gap: 12px; background-color: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 14px; }
-        .input-wrapper:focus-within { border-color: var(--accent-blue); box-shadow: 0 0 0 2px rgba(47, 129, 247, 0.2); }
-        
-        .chat-input-area textarea { flex: 1; background: transparent; border: none; color: #fff; font-size: 14px; resize: none; outline: none; max-height: 120px; line-height: 1.5; }
-        
-        .attach-btn { cursor: pointer; color: var(--text-secondary); font-size: 18px; display: flex; align-items: center; transition: color 0.2s; }
-        .attach-btn:hover { color: var(--accent-blue); }
-        
-        .send-btn { background-color: var(--accent-blue); color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-weight: 600; font-size: 13px; cursor: pointer; transition: background 0.2s; }
-        .send-btn:hover { background-color: var(--accent-hover); }
+        .input-area { padding: 20px 24px; background: var(--bg-sidebar); border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; }
+        .input-box { flex: 1; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px; display: flex; padding: 8px 12px; align-items: center; }
+        textarea { flex: 1; background: transparent; border: none; color: #fff; font-size: 14px; resize: none; outline: none; max-height: 120px; }
     </style>
 </head>
 <body>
 
-    <!-- Sidebar com Histórico e Agentes -->
     <div class="sidebar">
         <div class="sidebar-header">
-            <h1>⚡ AI Workspace Pro</h1>
+            <h1>⚡ AI Hub Enterprise</h1>
         </div>
+        <button class="btn-primary" onclick="newChat()">＋ Novo Chat</button>
 
-        <button class="new-chat-btn" onclick="createNewChat()">＋ Novo Chat</button>
-
-        <div class="agent-selector-container">
-            <label for="agent-select">Especialidade do Agente</label>
-            <select id="agent-select" class="agent-select" onchange="updateActiveAgent()">
-                <option value="Assistente Geral">🛡️ Assistente Geral</option>
-                <option value="Infraestrutura & Sistemas">⚙️ Infraestrutura & Sistemas (SAP/Salesforce)</option>
-                <option value="Desenvolvimento & Código">💻 Desenvolvimento & Código (JS/APIs)</option>
+        <div class="form-group">
+            <label>Especialidade do Agente</label>
+            <select id="agent-select" class="select-box" onchange="updateSession()">
+                <option value="Geral">🛡️ Assistente Geral</option>
+                <option value="Sistemas">⚙️ Infra & Sistemas (SAP/Salesforce)</option>
+                <option value="Dev">💻 Desenvolvimento (Code/API)</option>
             </select>
         </div>
 
-        <div class="history-section">
-            <h3>Conversas Anteriores</h3>
-            <div id="history-list" style="display: flex; flex-direction: column; gap: 4px;">
-                <!-- Lista injetada via JS -->
-            </div>
-        </div>
+        <div class="history-section" id="history-list"></div>
     </div>
 
-    <!-- Área Principal de Chat -->
     <div class="chat-container">
         <div class="chat-header">
-            <div class="chat-header-info">
-                <span class="chat-header-title" id="chat-title-display">Novo Chat</span>
-                <span class="chat-header-subtitle" id="chat-subtitle-display">Assistente Geral</span>
+            <div>
+                <h3 id="chat-title" style="font-size: 15px;">Novo Chat</h3>
+                <span id="chat-sub" style="font-size: 12px; color: #8b949e;">Powered by Gemini 1.5 Flash</span>
+            </div>
+            <div class="header-actions">
+                <button class="btn-export" onclick="exportTXT()">Exportar TXT</button>
+                <button class="btn-export" onclick="exportPDF()">Exportar PDF</button>
             </div>
         </div>
 
-        <div class="chat-messages" id="chat-messages">
-            <!-- Mensagens -->
-        </div>
+        <div class="chat-messages" id="chat-messages"></div>
 
-        <div class="chat-input-area">
-            <div id="preview-container">
-                <img id="file-preview" src="" alt="preview" style="display:none;">
-                <span id="file-name" style="color: #fff;"></span>
-                <span id="remove-file" onclick="clearFile()" title="Remover anexo">✕</span>
+        <div class="input-area">
+            <div class="input-box">
+                <label for="file-input" style="cursor:pointer; margin-right:10px; color:#8b949e;" title="Anexar texto/log">📎</label>
+                <input type="file" id="file-input" accept=".txt,.csv,.json,.js,.log,.md,.sql" style="display:none;" onchange="handleFile(event)" />
+                <textarea id="user-input" rows="1" placeholder="Escreva ou cole o seu código/logs..." onkeydown="checkEnter(event)"></textarea>
             </div>
-            <div class="input-wrapper">
-                <label for="file-input" class="attach-btn" title="Anexar imagem ou ficheiro de texto/log">📎</label>
-                <input type="file" id="file-input" accept="image/*,.txt,.csv,.json,.js,.log,.md,.sql" style="display: none;" onchange="handleFileSelect(event)" />
-                <textarea id="user-input" rows="1" placeholder="Escreva a sua mensagem ou cole código/logs..." onkeydown="checkEnter(event)"></textarea>
-                <button class="send-btn" onclick="sendMessage()">Enviar</button>
-            </div>
+            <button class="btn-primary" onclick="sendMsg()">Enviar</button>
         </div>
     </div>
 
     <script>
-        const agentInstructions = {
-            "Assistente Geral": "Você é um assistente geral altamente competente, polido e versátil, focado em ajudar o utilizador em tarefas do dia a dia, organização e resolução geral de problemas.",
-            "Infraestrutura & Sistemas": "Você é um engenheiro sênior de infraestrutura e sistemas corporativos, especialista em SAP S/4HANA, Salesforce, Senior Sistemas (Senior HCM), redes, servidores e diagnóstico de falhas.",
-            "Desenvolvimento & Código": "Você é um programador e analista de sistemas sênior, especialista em JavaScript, Node.js, Vercel, integrações de APIs, Model Context Protocol (MCP) e depuração."
+        // Configuração do Marked.js para injetar o botão "Copiar"
+        const renderer = new marked.Renderer();
+        renderer.code = function({text, lang}) {
+            const codeContent = text.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return `
+                <div class="code-wrapper">
+                    <div class="code-header">
+                        <span style="color:#8b949e; font-size:12px;">${lang || 'code'}</span>
+                        <button class="copy-btn" onclick="navigator.clipboard.writeText(\`${codeContent}\`)">Copiar</button>
+                    </div>
+                    <pre><code>${codeContent}</code></pre>
+                </div>`;
+        };
+        marked.setOptions({ renderer: renderer });
+
+        const personas = {
+            "Geral": "És um assistente corporativo versátil, especialista em produtividade e resolução de problemas. Responde de forma clara.",
+            "Sistemas": "És um engenheiro sénior de infraestrutura. Especialista em SAP S/4HANA, Salesforce, e Senior HCM. Responde de forma técnica e direta.",
+            "Dev": "És um programador Full-Stack sénior. Especialista em Node.js, Javascript e integrações. Gera código limpo e comentado."
         };
 
-        let sessions = JSON.parse(localStorage.getItem('ai_chat_sessions') || '[]');
-        let activeSessionId = localStorage.getItem('ai_active_session_id') || null;
+        let sessions = JSON.parse(localStorage.getItem('gemini_sessions') || '[]');
+        let activeId = localStorage.getItem('gemini_active_id');
+        let fileContent = "";
 
-        let attachedFileContent = null;
-        let attachedImageBase64 = null;
-
-        function initApp() {
-            if (sessions.length === 0) {
-                createNewChat();
-            } else {
-                if (!activeSessionId || !sessions.find(s => s.id === activeSessionId)) {
-                    activeSessionId = sessions[0].id;
-                }
-                loadSession(activeSessionId);
-            }
-            renderHistoryList();
+        function init() {
+            if (!sessions.length) newChat();
+            else loadSession(activeId || sessions[0].id);
         }
 
-        function createNewChat() {
-            const newSession = {
-                id: 'session_' + Date.now(),
-                title: 'Novo Chat',
-                agent: document.getElementById('agent-select').value,
-                history: []
-            };
-            sessions.unshift(newSession);
-            activeSessionId = newSession.id;
-            saveAndRefresh();
-        }
-
-        function getActiveSession() {
-            return sessions.find(s => s.id === activeSessionId) || sessions[0];
+        function newChat() {
+            const id = 'chat_' + Date.now();
+            sessions.unshift({ id, title: 'Novo Chat', agent: 'Geral', history: [] });
+            loadSession(id);
         }
 
         function loadSession(id) {
-            activeSessionId = id;
-            localStorage.setItem('ai_active_session_id', id);
-            const session = getActiveSession();
+            activeId = id;
+            const s = sessions.find(s => s.id === id) || sessions[0];
+            document.getElementById('agent-select').value = s.agent;
+            document.getElementById('chat-title').innerText = s.title;
             
-            document.getElementById('agent-select').value = session.agent;
-            document.getElementById('chat-title-display').innerText = session.title;
-            document.getElementById('chat-subtitle-display').innerText = `Agente: ${session.agent}`;
-
-            renderMessages();
-            renderHistoryList();
+            const msgDiv = document.getElementById('chat-messages');
+            msgDiv.innerHTML = s.history.length ? '' : `<div class="message bot">Pronto a ajudar! Configurei-me como **${s.agent}**. Como procedemos?</div>`;
+            
+            s.history.forEach(m => addBubble(m.parts[0].text, m.role, false));
+            save();
+            renderList();
         }
 
-        function updateActiveAgent() {
-            const session = getActiveSession();
-            if (session) {
-                session.agent = document.getElementById('agent-select').value;
-                document.getElementById('chat-subtitle-display').innerText = `Agente: ${session.agent}`;
-                saveAndRefresh();
-            }
+        function updateSession() {
+            const s = sessions.find(s => s.id === activeId);
+            s.agent = document.getElementById('agent-select').value;
+            save();
         }
 
-        function deleteChat(id, event) {
-            event.stopPropagation();
+        function deleteChat(id, e) {
+            e.stopPropagation();
             sessions = sessions.filter(s => s.id !== id);
-            if (sessions.length === 0) {
-                createNewChat();
-            } else if (activeSessionId === id) {
-                activeSessionId = sessions[0].id;
-                loadSession(activeSessionId);
-            } else {
-                saveAndRefresh();
-            }
+            init();
         }
 
-        function renderHistoryList() {
-            const listDiv = document.getElementById('history-list');
-            listDiv.innerHTML = '';
-            sessions.forEach(s => {
-                const item = document.createElement('div');
-                item.className = `chat-history-item ${s.id === activeSessionId ? 'active' : ''}`;
-                item.innerHTML = `
-                    <span>💬 ${s.title}</span>
-                    <span class="delete-chat" onclick="deleteChat('${s.id}', event)" title="Apagar chat">🗑️</span>
-                `;
-                item.onclick = () => loadSession(s.id);
-                listDiv.appendChild(item);
-            });
+        function renderList() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = sessions.map(s => `
+                <div class="chat-item ${s.id === activeId ? 'active' : ''}" onclick="loadSession('${s.id}')">
+                    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${s.title}</span>
+                    <span class="delete-btn" onclick="deleteChat('${s.id}', event)">🗑️</span>
+                </div>
+            `).join('');
         }
 
-        function renderMessages() {
-            const messagesDiv = document.getElementById('chat-messages');
-            messagesDiv.innerHTML = '';
-            const session = getActiveSession();
-
-            if (session.history.length === 0) {
-                appendMessage(`Olá! Estou pronto. Como posso ajudar na especialidade de **${session.agent}**?`, 'bot', false);
-            } else {
-                session.history.forEach(item => {
-                    const sender = item.role === 'user' ? 'user' : 'bot';
-                    let text = "";
-                    if (item.parts) {
-                        item.parts.forEach(p => { if (p.text) text += p.text; });
-                    }
-                    if (text) appendMessage(text, sender, sender === 'bot');
-                });
-            }
-        }
-
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
+        function handleFile(e) {
+            const file = e.target.files[0];
             if (!file) return;
-
-            if (file.type.startsWith('image/')) {
-                const previewImg = document.getElementById('file-preview');
-                previewImg.style.display = 'block';
-                previewImg.src = URL.createObjectURL(file);
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    attachedImageBase64 = {
-                        mimeType: file.type,
-                        data: e.target.result.split(',')[1]
-                    };
-                    attachedFileContent = null;
-                };
-                reader.readAsDataURL(file);
-                document.getElementById('file-name').innerText = file.name;
-                document.getElementById('preview-container').style.display = 'flex';
-            } else if (file.name.match(/\.(txt|csv|json|js|log|md|sql)$/i) || file.type.startsWith('text/')) {
-                const previewImg = document.getElementById('file-preview');
-                previewImg.style.display = 'none';
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    attachedFileContent = `\n\n--- Conteúdo do Ficheiro Anexado (${file.name}) ---\n${e.target.result}\n-------------------------------------------`;
-                    attachedImageBase64 = null;
-                };
-                reader.readAsText(file);
-                document.getElementById('file-name').innerText = file.name;
-                document.getElementById('preview-container').style.display = 'flex';
-            } else {
-                alert("Formato não suportado para leitura direta. Envie imagens ou ficheiros de texto/código (.txt, .log, .csv, .js).");
-                clearFile();
-            }
+            const reader = new FileReader();
+            reader.onload = res => { fileContent = `\n\n[Ficheiro Anexado: ${file.name}]\n${res.target.result}`; };
+            reader.readAsText(file);
         }
 
-        function clearFile() {
-            attachedFileContent = null;
-            attachedImageBase64 = null;
-            document.getElementById('file-input').value = '';
-            document.getElementById('preview-container').style.display = 'none';
-        }
+        function checkEnter(e) { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } }
 
-        function checkEnter(event) {
-            if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                sendMessage();
-            }
-        }
-
-        async function sendMessage() {
+        async function sendMsg() {
             const input = document.getElementById('user-input');
-            let text = input.value.trim();
-            if (!text && !attachedFileContent && !attachedImageBase64) return;
-
-            if (attachedFileContent) {
-                text += attachedFileContent;
-            }
-
-            let parts = [{ text: text }];
-            if (attachedImageBase64) {
-                parts.push({ inlineData: attachedImageBase64 });
-            }
-
-            const session = getActiveSession();
+            let text = input.value.trim() + fileContent;
+            if (!text) return;
             
-            // Define o título do chat com base na primeira mensagem se ainda for "Novo Chat"
-            if (session.title === 'Novo Chat') {
-                session.title = text.length > 28 ? text.substring(0, 28) + '...' : text;
-                document.getElementById('chat-title-display').innerText = session.title;
-            }
+            const s = sessions.find(s => s.id === activeId);
+            if (s.title === 'Novo Chat') s.title = text.substring(0, 25) + '...';
 
-            appendMessage(text, 'user', false);
-            session.history.push({ role: 'user', parts: parts });
-            saveAndRefresh();
-
+            addBubble(text, 'user');
+            s.history.push({ role: 'user', parts: [{ text }] });
+            
             input.value = '';
-            clearFile();
+            fileContent = '';
+            save();
 
-            const loadingId = appendMessage('A processar com modelos de elite...', 'bot loading', false);
+            const loadId = addBubble('A processar...', 'bot loading');
 
             try {
-                const response = await fetch('/api/chat', {
+                const res = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        history: session.history,
-                        systemInstruction: agentInstructions[session.agent]
+                        history: s.history,
+                        systemInstruction: personas[s.agent]
                     })
                 });
-
-                const data = await response.json();
-                removeMessage(loadingId);
-
-                if (response.ok) {
-                    appendMessage(data.text, 'bot', true);
-                    session.history.push({ role: 'model', parts: [{ text: data.text }] });
-                    saveAndRefresh();
-                } else {
-                    appendMessage(`⚠️ Erro: ${data.error || 'Falha na resposta.'}`, 'bot', false);
-                }
+                const data = await res.json();
+                document.getElementById(loadId).remove();
+                
+                if (res.ok) {
+                    addBubble(data.text, 'bot');
+                    s.history.push({ role: 'model', parts: [{ text: data.text }] });
+                    save();
+                } else addBubble('Erro: ' + data.error, 'bot');
             } catch (err) {
-                removeMessage(loadingId);
-                appendMessage('❌ Erro de conexão com o servidor da Vercel.', 'bot', false);
+                document.getElementById(loadId).remove();
+                addBubble('Falha na ligação.', 'bot');
             }
         }
 
-        function appendMessage(text, sender, isMarkdown) {
-            const messagesDiv = document.getElementById('chat-messages');
-            const msgDiv = document.createElement('div');
-            const msgId = 'msg-' + Date.now();
-            msgDiv.id = msgId;
-            msgDiv.className = `message ${sender}`;
-
-            if (isMarkdown && sender === 'bot') {
-                msgDiv.innerHTML = marked.parse(text);
-            } else {
-                msgDiv.innerText = text;
-            }
-
-            messagesDiv.appendChild(msgDiv);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            return msgId;
+        function addBubble(text, role, animate=true) {
+            const div = document.createElement('div');
+            div.id = 'msg_' + Date.now();
+            div.className = `message ${role}`;
+            div.innerHTML = (role.includes('bot') && !role.includes('loading')) ? marked.parse(text) : text;
+            document.getElementById('chat-messages').appendChild(div);
+            div.scrollIntoView({ behavior: animate ? 'smooth' : 'auto' });
+            return div.id;
         }
 
-        function removeMessage(id) {
-            const el = document.getElementById(id);
-            if (el) el.remove();
+        function save() {
+            localStorage.setItem('gemini_sessions', JSON.stringify(sessions));
+            localStorage.setItem('gemini_active_id', activeId);
+            renderList();
         }
 
-        function saveAndRefresh() {
-            localStorage.setItem('ai_chat_sessions', JSON.stringify(sessions));
-            localStorage.setItem('ai_active_session_id', activeSessionId);
-            renderHistoryList();
+        function exportTXT() {
+            const s = sessions.find(s => s.id === activeId);
+            const content = s.history.map(m => `${m.role.toUpperCase()}:\n${m.parts[0].text}\n`).join('\n---\n');
+            const blob = new Blob([content], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `chat_${Date.now()}.txt`;
+            a.click();
         }
 
-        window.onload = () => {
-            initApp();
-        };
+        function exportPDF() {
+            const element = document.getElementById('chat-messages');
+            html2pdf().from(element).set({ margin: 10, filename: `chat_${Date.now()}.pdf` }).save();
+        }
+
+        window.onload = init;
     </script>
 </body>
 </html>
