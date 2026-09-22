@@ -18,11 +18,10 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Chave API não configurada.' });
     }
 
-    // Forçamos o nome do modelo para evitar erros 404
-   const modelName = "gemini-pro";
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    // Alterado para a versão oficial da API (v1) e modelo estável
+    const modelName = "gemini-1.5-flash";
+    const apiUrl = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${apiKey}`;
 
-    // Log de diagnóstico na Vercel (esconde a chave)
     console.log("Tentando comunicar com:", apiUrl.split("?key=")[0]);
 
     const response = await fetch(apiUrl, {
@@ -32,7 +31,6 @@ export default async function handler(req, res) {
     });
 
     if (!response.ok) {
-      // Captura a mensagem de erro exata da Google
       const errorData = await response.text();
       console.error(`ERRO DO GOOGLE (Status ${response.status}):`, errorData);
       return res.status(response.status).json({ error: 'A API do Google falhou.' });
