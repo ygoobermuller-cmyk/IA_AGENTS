@@ -3,86 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Multi-Agent Pro</title>
+    <title>AI Multi-Agent Pro - Enterprise</title>
     <style>
         :root {
-            --bg-color: #0f1117;
-            --panel-bg: #161b22;
-            --border-color: #30363d;
-            --text-primary: #c9d1d9;
-            --accent-color: #238636;
-            --accent-blue: #1f6feb;
-            --user-msg: #1f242c;
-            --bot-msg: #161b22;
+            --bg-color: #0b0f19;
+            --panel-bg: #111827;
+            --border-color: #1f2937;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --accent-blue: #3b82f6;
+            --accent-hover: #2563eb;
+            --user-msg: #1e293b;
+            --bot-msg: #111827;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: var(--bg-color); color: var(--text-primary); height: 100vh; display: flex; overflow: hidden; }
 
         /* Sidebar */
-        .sidebar { width: 260px; background-color: var(--panel-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px; }
-        .sidebar h2 { font-size: 16px; margin-bottom: 20px; color: #fff; display: flex; align-items: center; gap: 8px; }
-        .agent-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
-        .agent-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; transition: background 0.2s; font-size: 14px; }
-        .agent-item:hover, .agent-item.active { background-color: #21262d; color: #58a6ff; font-weight: 500; }
+        .sidebar { width: 280px; background-color: var(--panel-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 24px 16px; }
+        .sidebar h2 { font-size: 15px; font-weight: 600; margin-bottom: 24px; color: #fff; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px; }
+        .agent-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+        .agent-item { padding: 12px 14px; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; font-size: 14px; color: var(--text-secondary); display: flex; align-items: center; gap: 10px; }
+        .agent-item:hover { background-color: #1f2937; color: var(--text-primary); }
+        .agent-item.active { background-color: #1e3a8a; color: #93c5fd; font-weight: 500; border: 1px solid #3b82f6; }
 
         /* Main Chat Area */
-        .chat-container { flex: 1; display: flex; flex-direction: column; height: 100vh; }
-        .chat-header { padding: 15px 25px; background-color: var(--panel-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-        .chat-header span { font-weight: 600; color: #fff; }
+        .chat-container { flex: 1; display: flex; flex-direction: column; height: 100vh; background-color: var(--bg-color); }
+        .chat-header { padding: 18px 30px; background-color: var(--panel-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .chat-header span { font-weight: 600; font-size: 15px; color: #fff; }
 
-        .chat-messages { flex: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
-        .message { max-width: 75%; padding: 12px 16px; border-radius: 8px; font-size: 14px; line-height: 1.5; word-break: break-word; }
-        .message.user { background-color: var(--user-msg); align-self: flex-end; border: 1px solid var(--border-color); }
+        .chat-messages { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; scroll-behavior: smooth; }
+        .message { max-width: 80%; padding: 14px 18px; border-radius: 12px; font-size: 14px; line-height: 1.6; word-break: break-word; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .message.user { background-color: var(--user-msg); align-self: flex-end; border: 1px solid #334155; }
         .message.bot { background-color: var(--bot-msg); align-self: flex-start; border: 1px solid var(--border-color); }
+        
+        /* Estilização de código nas mensagens */
+        .message pre { background: #030712; padding: 10px; border-radius: 6px; margin-top: 8px; overflow-x: auto; border: 1px solid #1f2937; }
+        .message code { font-family: monospace; font-size: 13px; color: #60a5fa; }
 
         /* Input Area */
-        .chat-input-area { padding: 20px 25px; background-color: var(--panel-bg); border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px; }
-        .input-wrapper { display: flex; align-items: center; gap: 10px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px; }
-        .chat-input-area textarea { flex: 1; background: transparent; border: none; color: #fff; font-size: 14px; resize: none; outline: none; max-height: 120px; }
+        .chat-input-area { padding: 20px 30px; background-color: var(--panel-bg); border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 12px; }
         
-        .action-btns { display: flex; align-items: center; gap: 10px; }
-        .attach-btn { cursor: pointer; color: #8b949e; font-size: 18px; transition: color 0.2s; }
-        .attach-btn:hover { color: #58a6ff; }
-        .send-btn { background-color: var(--accent-blue); color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-        .send-btn:hover { background-color: #388bfd; }
+        #preview-container { display: none; align-items: center; gap: 12px; background: #1f2937; padding: 8px 12px; border-radius: 8px; width: fit-content; font-size: 13px; border: 1px solid #374151; }
+        #preview-container img { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; }
+        #remove-file { color: #ef4444; cursor: pointer; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
+        #remove-file:hover { background: rgba(239, 68, 68, 0.2); }
 
-        /* Preview anexo */
-        #preview-container { display: none; align-items: center; gap: 10px; background: #21262d; padding: 6px 10px; border-radius: 6px; width: fit-content; font-size: 12px; }
-        #preview-container img { width: 30px; height: 30px; object-fit: cover; border-radius: 4px; }
-        #remove-file { color: #f85149; cursor: pointer; font-weight: bold; }
+        .input-wrapper { display: flex; align-items: center; gap: 12px; background-color: #030712; border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 16px; }
+        .input-wrapper:focus-within { border-color: var(--accent-blue); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+        
+        .chat-input-area textarea { flex: 1; background: transparent; border: none; color: #fff; font-size: 14px; resize: none; outline: none; max-height: 120px; line-height: 1.5; }
+        
+        .attach-btn { cursor: pointer; color: var(--text-secondary); font-size: 20px; transition: color 0.2s; display: flex; align-items: center; }
+        .attach-btn:hover { color: var(--accent-blue); }
+        
+        .send-btn { background-color: var(--accent-blue); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-weight: 600; font-size: 14px; cursor: pointer; transition: background 0.2s; }
+        .send-btn:hover { background-color: var(--accent-hover); }
     </style>
 </head>
 <body>
 
     <div class="sidebar">
-        <h2>🤖 AI Multi-Agent</h2>
+        <h2>⚡ AI Multi-Agent Pro</h2>
         <ul class="agent-list">
-            <li class="agent-item active" onclick="selectAgent('Assistente Geral')">Assistente Geral</li>
-            <li class="agent-item" onclick="selectAgent('Infraestrutura & Sistemas')">Infraestrutura & Sistemas</li>
-            <li class="agent-item" onclick="selectAgent('Desenvolvimento & Código')">Desenvolvimento & Código</li>
+            <li class="agent-item active" onclick="selectAgent('Assistente Geral', this)">🛡️ Assistente Geral</li>
+            <li class="agent-item" onclick="selectAgent('Infraestrutura & Sistemas', this)">⚙️ Infraestrutura & Sistemas</li>
+            <li class="agent-item" onclick="selectAgent('Desenvolvimento & Código', this)">💻 Desenvolvimento & Código</li>
         </ul>
     </div>
 
     <div class="chat-container">
         <div class="chat-header">
-            <span id="current-agent-title">Agente: Assistente Geral</span>
+            <span id="current-agent-title">Agente Ativo: Assistente Geral</span>
         </div>
 
         <div class="chat-messages" id="chat-messages">
-            <div class="message bot">Olá! Sou o seu assistente. Como posso ajudar hoje? Pode inclusive enviar imagens ou capturas de ecrã para analisar.</div>
+            <div class="message bot">Olá! Sistema preparado e operativo com redundância de modelos ativa. Como posso ajudar hoje? Pode anexar imagens ou capturas de ecrã se precisar.</div>
         </div>
 
         <div class="chat-input-area">
             <div id="preview-container">
                 <img id="file-preview" src="" alt="preview">
-                <span id="file-name"></span>
-                <span id="remove-file" onclick="clearFile()">✕</span>
+                <span id="file-name" style="color: #fff;"></span>
+                <span id="remove-file" onclick="clearFile()" title="Remover anexo">✕</span>
             </div>
             <div class="input-wrapper">
-                <label for="file-input" class="attach-btn" title="Anexar imagem">📎</label>
+                <label for="file-input" class="attach-btn" title="Anexar imagem ou documento">📎</label>
                 <input type="file" id="file-input" accept="image/*" style="display: none;" onchange="handleFileSelect(event)" />
-                <textarea id="user-input" rows="1" placeholder="Digite a sua mensagem..." onkeydown="checkEnter(event)"></textarea>
+                <textarea id="user-input" rows="1" placeholder="Escreva a sua mensagem ou cole uma instrução..." onkeydown="checkEnter(event)"></textarea>
                 <button class="send-btn" onclick="sendMessage()">Enviar</button>
             </div>
         </div>
@@ -93,9 +102,11 @@
         let chatHistory = [];
         let attachedFile = null;
 
-        function selectAgent(agentName) {
+        function selectAgent(agentName, element) {
             currentAgent = agentName;
-            document.getElementById('current-agent-title').innerText = `Agente: ${agentName}`;
+            document.getElementById('current-agent-title').innerText = `Agente Ativo: ${agentName}`;
+            document.querySelectorAll('.agent-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
         }
 
         function handleFileSelect(event) {
@@ -138,7 +149,11 @@
             if (!text && !attachedFile) return;
 
             let parts = [];
-            if (text) parts.push({ text: `[Contexto - Agente Ativo: ${currentAgent}] ${text}` });
+            let displayMessage = text;
+
+            if (text) {
+                parts.push({ text: `[Contexto - Especialidade Ativa: ${currentAgent}] ${text}` });
+            }
 
             if (attachedFile) {
                 const base64Data = await toBase64(attachedFile);
@@ -148,18 +163,16 @@
                         data: base64Data
                     }
                 });
+                displayMessage += ` [📎 Ficheiro anexado: ${attachedFile.name}]`;
             }
 
-            // Adiciona mensagem do utilizador visualmente
-            appendMessage(text || "[Ficheiro Anexado]", 'user');
+            appendMessage(displayMessage, 'user');
             chatHistory.push({ role: 'user', parts: parts });
 
             input.value = '';
-            const sentFile = attachedFile;
             clearFile();
 
-            // Mostra indicador de loading
-            const loadingId = appendMessage('A pensar...', 'bot loading');
+            const loadingId = appendMessage('A processar com redundância ativada...', 'bot loading');
 
             try {
                 const response = await fetch('/api/chat', {
@@ -175,11 +188,11 @@
                     appendMessage(data.text, 'bot');
                     chatHistory.push({ role: 'model', parts: [{ text: data.text }] });
                 } else {
-                    appendMessage(`Erro: ${data.error || 'Falha na comunicação.'}`, 'bot');
+                    appendMessage(`⚠️ Erro: ${data.error || 'Falha na resposta do servidor.'}`, 'bot');
                 }
             } catch (err) {
                 removeMessage(loadingId);
-                appendMessage('Erro de conexão com o servidor.', 'bot');
+                appendMessage('❌ Erro de conexão com o servidor da Vercel.', 'bot');
             }
         }
 
