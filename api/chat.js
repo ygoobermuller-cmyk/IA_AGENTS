@@ -17,7 +17,8 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Chave API não configurada.' });
     }
 
-    const modelsToTry = ["gemini-3.6-flash", "gemini-1.5-flash", "gemini-pro"];
+    // Modelos oficiais 100% suportados e estáveis
+    const modelsToTry = ["gemini-1.5-flash", "gemini-1.5-pro"];
     let data = null;
     let success = false;
     let lastErrorDetail = "";
@@ -50,7 +51,7 @@ export default async function handler(req, res) {
     }
 
     if (!success || !data) {
-      return res.status(503).json({ error: `Indisponível: ${lastErrorDetail.substring(0, 100)}` });
+      return res.status(503).json({ error: `Indisponível: ${lastErrorDetail.substring(0, 120)}` });
     }
 
     const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta gerada.";
