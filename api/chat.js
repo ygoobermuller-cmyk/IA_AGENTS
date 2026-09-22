@@ -17,12 +17,11 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Chave API não configurada.' });
     }
 
-    // Cadeia de elite com os modelos frontier mais potentes e recentes
     const modelsToTry = [
       "gemini-3.8-flash",
       "gemini-3.6-flash",
       "gemini-3.5-flash",
-      "gemini-3.1-pro-preview"
+      "gemini-1.5-flash"
     ];
 
     let data = null;
@@ -52,7 +51,6 @@ export default async function handler(req, res) {
       } else {
         const errText = await response.text();
         lastErrorDetail = errText;
-        console.warn(`Modelo ${modelName} indisponível, a transitar para o seguinte...`, errText);
       }
     }
 
