@@ -114,14 +114,6 @@
         <button class="btn-primary" onclick="newChat()">+ Novo Workspace</button>
 
         <div class="form-group">
-            <label>Motor (Cérebro)</label>
-            <select id="provider-select" class="select-box" onchange="updateSession()">
-                <option value="openai">🤖 OpenAI (GPT-4o)</option>
-                <option value="google">⚡ Google (Gemini 1.5)</option>
-            </select>
-        </div>
-
-        <div class="form-group">
             <label>Contexto Operacional</label>
             <select id="agent-select" class="select-box" onchange="updateSession()">
                 <option value="Geral">🛡️ Assistente Geral</option>
@@ -216,8 +208,8 @@
             ]
         };
 
-        let sessions = JSON.parse(localStorage.getItem('ai_hub_v2_sessions') || '[]');
-        let activeId = localStorage.getItem('ai_hub_v2_active');
+        let sessions = JSON.parse(localStorage.getItem('ai_hub_v3_sessions') || '[]');
+        let activeId = localStorage.getItem('ai_hub_v3_active');
         let fileContent = "";
 
         function init() {
@@ -233,7 +225,7 @@
                 id, 
                 title: 'Novo Workspace', 
                 agent: document.getElementById('agent-select').value || 'Geral',
-                provider: document.getElementById('provider-select').value || 'openai',
+                provider: 'google',
                 history: [] 
             });
             loadSession(id);
@@ -261,13 +253,9 @@
             activeId = id;
             const s = sessions.find(s => s.id === id) || sessions[0];
             
-            // Compatibilidade com chats antigos que não tinham provider
-            if (!s.provider) s.provider = 'google'; 
-            
             document.getElementById('agent-select').value = s.agent;
-            document.getElementById('provider-select').value = s.provider;
             document.getElementById('chat-title').innerText = s.title;
-            document.getElementById('chat-sub').innerText = `${s.provider.toUpperCase()} • ${s.agent}`;
+            document.getElementById('chat-sub').innerText = `Sistema Operativo • ${s.agent}`;
             
             if (s.history.length === 0) {
                 renderWelcomeScreen(s.agent);
@@ -288,8 +276,7 @@
         function updateSession() {
             const s = sessions.find(s => s.id === activeId);
             s.agent = document.getElementById('agent-select').value;
-            s.provider = document.getElementById('provider-select').value;
-            document.getElementById('chat-sub').innerText = `${s.provider.toUpperCase()} • ${s.agent}`;
+            document.getElementById('chat-sub').innerText = `Sistema Operativo • ${s.agent}`;
             
             if (s.history.length === 0) renderWelcomeScreen(s.agent);
             save();
@@ -357,7 +344,7 @@
                     body: JSON.stringify({ 
                         history: tempHistory, 
                         systemInstruction: personas[s.agent],
-                        provider: s.provider
+                        provider: 'google'
                     })
                 });
                 
@@ -369,7 +356,7 @@
                     s.history.push({ role: 'model', parts: [{ text: data.text }] });
                     renderMessage(data.text, 'bot');
                 } else {
-                    renderMessage(`⚠️ **Atenção (${s.provider.toUpperCase()}):** ${data.error}`, 'bot');
+                    renderMessage(`⚠️ **Atenção:** ${data.error}`, 'bot');
                 }
                 save();
             } catch (err) {
@@ -400,8 +387,8 @@
         }
 
         function save() {
-            localStorage.setItem('ai_hub_v2_sessions', JSON.stringify(sessions));
-            localStorage.setItem('ai_hub_v2_active', activeId);
+            localStorage.setItem('ai_hub_v3_sessions', JSON.stringify(sessions));
+            localStorage.setItem('ai_hub_v3_active', activeId);
             renderList();
         }
 
