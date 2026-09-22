@@ -17,6 +17,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Chave API não configurada.' });
     }
 
+    // Cadeia de fallback hierárquica garantindo robustez máxima
     const modelsToTry = ["gemini-3.6-flash", "gemini-1.5-flash", "gemini-pro"];
     let data = null;
     let success = false;
@@ -36,19 +37,19 @@ export default async function handler(req, res) {
         break;
       } else {
         const errText = await response.text();
-        console.warn(`Modelo ${modelName} falhou:`, errText);
+        console.warn(`Modelo ${modelName} indisponível, a tentar próximo... Resposta:`, errText);
       }
     }
 
     if (!success || !data) {
-      return res.status(503).json({ error: 'Todos os modelos estão temporariamente sobrecarregados. Tente novamente.' });
+      return res.status(503).json({ error: 'Todos os modelos estão com alta procura neste momento. Tente novamente em instantes.' });
     }
 
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta.";
+    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta gerada.";
     return res.status(200).json({ text: responseText });
 
   } catch (error) {
-    console.error("Erro interno no servidor:", error);
-    return res.status(500).json({ error: 'Falha interna.' });
+    console.error("Erro interno crítico no servidor:", error);
+    return res.status(500).json({ error: 'Falha interna no processamento.' });
   }
 }
