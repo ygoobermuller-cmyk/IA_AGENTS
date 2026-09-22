@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     }
 
     // Forçamos o nome do modelo para evitar erros 404
-   const modelName = "gemini-1.5-flash-latest";
+   const modelName = "gemini-pro";
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
     // Log de diagnóstico na Vercel (esconde a chave)
