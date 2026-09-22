@@ -5,48 +5,39 @@ export default async function handler(req, res) {
 
   try {
     const { history, systemInstruction } = req.body;
-    if (!history || !Array.isArray(history) || history.length === 0) {
-        return res.status(400).json({ error: 'Histórico vazio ou inválido.' });
-    }
+    if (!history || history.length === 0) return res.status(400).json({ error: 'Histórico vazio.' });
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'Chave API não configurada.' });
 
-    // 1. BUSCA DINÂMICA DE MODELOS (FIM DOS ERROS 404)
-    // Pergunta à Google quais modelos a SUA chave suporta e tem acesso garantido.
-    const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-    const listRes = await fetch(listUrl);
-    
-    let modelsToTry = ["gemini-1.5-flash", "gemini-1.0-pro"]; // Backup absoluto
-    
-    if (listRes.ok) {
-        const listData = await listRes.json();
-        if (listData.models) {
-            // Filtra apenas modelos reais de texto que a sua chave consegue usar
-            const validModels = listData.models
-                .filter(m => m.supportedGenerationMethods?.includes('generateContent') && m.name.includes('gemini'))
-                .map(m => m.name.replace('models/', ''));
-            
-            // Ordena para o 1.5-flash ser sempre o primeiro a ser testado
-            modelsToTry = validModels.sort((a, b) => {
-                if (a.includes('1.5-flash') && !b.includes('1.5-flash')) return -1;
-                if (b.includes('1.5-flash') && !a.includes('1.5-flash')) return 1;
-                return 0;
-            });
+    // 1. SANITIZAÇÃO BLINDADA (Acaba com o erro 400 por histórico corrompido)
+    const safeHistory = [];
+    let currentRole = null;
+    for (const msg of history) {
+        // Ignora mensagens seguidas da mesma pessoa para não irritar a API da Google
+        if (msg.role !== currentRole) {
+            safeHistory.push({ role: msg.role, parts: msg.parts });
+            currentRole = msg.role;
         }
     }
-
-    const payload = { contents: history };
-    if (systemInstruction) {
-        payload.systemInstruction = { parts: [{ text: systemInstruction }] };
+    
+    // A Google exige que a última mensagem seja sempre do utilizador
+    if (safeHistory.length > 0 && safeHistory[safeHistory.length - 1].role !== 'user') {
+         safeHistory.pop();
     }
 
-    let mainError = "";
+    if (safeHistory.length === 0) return res.status(400).json({ error: 'Sincronização falhou. Atualize a página.' });
 
-    // 2. TENTA OS MODELOS REAIS UM POR UM
-    for (const model of modelsToTry) {
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-        
+    // Fixo exclusivamente no modelo oficial mais rápido
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const payload = { contents: safeHistory };
+    if (systemInstruction) payload.systemInstruction = { parts: [{ text: systemInstruction }] };
+
+    // 2. RETRY SILENCIOSO (Acaba com o erro 503 na cara do utilizador)
+    let maxAttempts = 3;
+    let lastError = "";
+
+    for (let i = 1; i <= maxAttempts; i++) {
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -55,30 +46,24 @@ export default async function handler(req, res) {
 
         if (response.ok) {
             const data = await response.json();
-            const texto = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta.";
-            return res.status(200).json({ text: texto });
+            return res.status(200).json({ text: data.candidates[0].content.parts[0].text });
         }
 
-        const errText = await response.text();
-        
-        // Se for erro 400, o problema é no histórico do utilizador, logo não vale a pena testar outros modelos
-        if (response.status === 400) {
-            return res.status(400).json({ error: "Erro no formato da mensagem. Por favor, inicie um Novo Workspace (limpe o histórico)." });
-        }
-        
-        // Guarda o erro, mas continua a testar o próximo modelo válido
-        try { 
-            mainError = JSON.parse(errText).error.message; 
-        } catch(e) { 
-            mainError = errText; 
-        }
+        lastError = await response.text();
+        const status = response.status;
+
+        // Se for erro de formato (400) ou chave bloqueada (403), não vale a pena insistir
+        if (status === 400 || status === 403 || status === 404) break;
+
+        // Se for erro de servidor da Google (503), espera 1.5s e tenta novamente
+        await new Promise(r => setTimeout(r, 1500 * i));
     }
-    
-    // Se todos falharem (muito raro agora)
-    return res.status(503).json({ error: `Servidores da Google ocupados neste momento. Detalhe: ${mainError}` });
+
+    let msg = lastError;
+    try { msg = JSON.parse(lastError).error.message; } catch(e){}
+    return res.status(500).json({ error: `Servidores da Google ocupados. Tente enviar de novo.` });
 
   } catch (error) {
-    console.error("Erro interno:", error);
     return res.status(500).json({ error: 'Falha interna na Vercel.' });
   }
 }
