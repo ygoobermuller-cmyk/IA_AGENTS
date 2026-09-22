@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Multi-Agent Pro - Enterprise</title>
+    <title>AI Multi-Agent Enterprise Pro</title>
+    <!-- Marked.js para renderização de Markdown e formatação de código -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         :root {
             --bg-color: #0b0f19;
@@ -38,9 +40,13 @@
         .message.user { background-color: var(--user-msg); align-self: flex-end; border: 1px solid #334155; }
         .message.bot { background-color: var(--bot-msg); align-self: flex-start; border: 1px solid var(--border-color); }
         
-        /* Estilização de código nas mensagens */
-        .message pre { background: #030712; padding: 10px; border-radius: 6px; margin-top: 8px; overflow-x: auto; border: 1px solid #1f2937; }
-        .message code { font-family: monospace; font-size: 13px; color: #60a5fa; }
+        /* Estilos Markdown nas respostas da IA */
+        .message.bot p { margin-bottom: 10px; }
+        .message.bot p:last-child { margin-bottom: 0; }
+        .message.bot pre { background: #030712; padding: 12px; border-radius: 6px; margin: 10px 0; overflow-x: auto; border: 1px solid #1f2937; }
+        .message.bot code { font-family: monospace; font-size: 13px; color: #60a5fa; background: rgba(31, 41, 55, 0.5); padding: 2px 4px; border-radius: 4px; }
+        .message.bot pre code { background: transparent; padding: 0; color: #e5e7eb; }
+        .message.bot ul, .message.bot ol { margin-left: 20px; margin-bottom: 10px; }
 
         /* Input Area */
         .chat-input-area { padding: 20px 30px; background-color: var(--panel-bg); border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 12px; }
@@ -67,9 +73,9 @@
     <div class="sidebar">
         <h2>⚡ AI Multi-Agent Pro</h2>
         <ul class="agent-list">
-            <li class="agent-item active" onclick="selectAgent('Assistente Geral', this)">🛡️ Assistente Geral</li>
-            <li class="agent-item" onclick="selectAgent('Infraestrutura & Sistemas', this)">⚙️ Infraestrutura & Sistemas</li>
-            <li class="agent-item" onclick="selectAgent('Desenvolvimento & Código', this)">💻 Desenvolvimento & Código</li>
+            <li class="agent-item active" onclick="switchAgent('Assistente Geral', this)">🛡️ Assistente Geral</li>
+            <li class="agent-item" onclick="switchAgent('Infraestrutura & Sistemas', this)">⚙️ Infraestrutura & Sistemas</li>
+            <li class="agent-item" onclick="switchAgent('Desenvolvimento & Código', this)">💻 Desenvolvimento & Código</li>
         </ul>
     </div>
 
@@ -79,50 +85,101 @@
         </div>
 
         <div class="chat-messages" id="chat-messages">
-            <div class="message bot">Olá! Sistema preparado e operativo com redundância de modelos ativa. Como posso ajudar hoje? Pode anexar imagens ou capturas de ecrã se precisar.</div>
+            <!-- As mensagens serão carregadas aqui -->
         </div>
 
         <div class="chat-input-area">
             <div id="preview-container">
-                <img id="file-preview" src="" alt="preview">
+                <img id="file-preview" src="" alt="preview" style="display:none;">
                 <span id="file-name" style="color: #fff;"></span>
                 <span id="remove-file" onclick="clearFile()" title="Remover anexo">✕</span>
             </div>
             <div class="input-wrapper">
-                <label for="file-input" class="attach-btn" title="Anexar imagem ou documento">📎</label>
-                <input type="file" id="file-input" accept="image/*" style="display: none;" onchange="handleFileSelect(event)" />
-                <textarea id="user-input" rows="1" placeholder="Escreva a sua mensagem ou cole uma instrução..." onkeydown="checkEnter(event)"></textarea>
+                <label for="file-input" class="attach-btn" title="Anexar imagem, documento de texto ou log">📎</label>
+                <input type="file" id="file-input" accept="image/*,.txt,.csv,.json,.js,.log,.md" style="display: none;" onchange="handleFileSelect(event)" />
+                <textarea id="user-input" rows="1" placeholder="Escreva a sua mensagem ou cole código/logs..." onkeydown="checkEnter(event)"></textarea>
                 <button class="send-btn" onclick="sendMessage()">Enviar</button>
             </div>
         </div>
     </div>
 
     <script>
-        let currentAgent = "Assistente Geral";
-        let chatHistory = [];
-        let attachedFile = null;
+        // System Instructions (Personas reais integradas no back-end)
+        const agentInstructions = {
+            "Assistente Geral": "Você é um assistente geral altamente competente, polido e versátil, focado em ajudar o utilizador em tarefas do dia a dia, organização e resolução geral de problemas.",
+            "Infraestrutura & Sistemas": "Você é um engenheiro sênior de infraestrutura e sistemas corporativos, especialista em SAP S/4HANA, Salesforce, Senior Sistemas (Senior HCM), redes, servidores, gestão de ambientes de TI e diagnóstico de falhas de hardware/software.",
+            "Desenvolvimento & Código": "Você é um programador e analista de sistemas sênior, especialista em JavaScript, Node.js, Vercel, integrações de APIs, Model Context Protocol (MCP), Power Automate e depuração de código complexo."
+        };
 
-        function selectAgent(agentName, element) {
+        let currentAgent = "Assistente Geral";
+        let chatHistories = JSON.parse(localStorage.getItem('chat_histories') || '{}');
+        let attachedFileContent = null; // Para texto/logs
+        let attachedImageBase64 = null; // Para imagens
+
+        function loadCurrentHistory() {
+            const messagesDiv = document.getElementById('chat-messages');
+            messagesDiv.innerHTML = '';
+            
+            const history = chatHistories[currentAgent] || [];
+            if (history.length === 0) {
+                const welcomeText = `Olá! Estou configurado como **${currentAgent}**. Como posso ajudar hoje?`;
+                appendMessage(welcomeText, 'bot', false);
+            } else {
+                history.forEach(item => {
+                    const sender = item.role === 'user' ? 'user' : 'bot';
+                    // Extrai o texto das parts
+                    let text = "";
+                    if (item.parts) {
+                        item.parts.forEach(p => { if (p.text) text += p.text; });
+                    }
+                    if (text) appendMessage(text, sender, sender === 'bot');
+                });
+            }
+        }
+
+        function switchAgent(agentName, element) {
             currentAgent = agentName;
             document.getElementById('current-agent-title').innerText = `Agente Ativo: ${agentName}`;
             document.querySelectorAll('.agent-item').forEach(el => el.classList.remove('active'));
             element.classList.add('active');
+            loadCurrentHistory();
         }
 
         function handleFileSelect(event) {
             const file = event.target.files[0];
-            if (file) {
-                attachedFile = file;
-                document.getElementById('file-name').innerText = file.name;
-                if (file.type.startsWith('image/')) {
-                    document.getElementById('file-preview').src = URL.createObjectURL(file);
-                }
-                document.getElementById('preview-container').style.display = 'flex';
+            if (!file) return;
+
+            document.getElementById('file-name').innerText = file.name;
+            const previewImg = document.getElementById('file-preview');
+
+            if (file.type.startsWith('image/')) {
+                previewImg.style.display = 'block';
+                previewImg.src = URL.createObjectURL(file);
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    attachedImageBase64 = {
+                        mimeType: file.type,
+                        data: e.target.result.split(',')[1]
+                    };
+                    attachedFileContent = null;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                // Ficheiro de texto, log, script, csv
+                previewImg.style.display = 'none';
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    attachedFileContent = `\n\n--- Conteúdo do Ficheiro Anexado (${file.name}) ---\n${e.target.result}\n-------------------------------------------`;
+                    attachedImageBase64 = null;
+                };
+                reader.readAsText(file);
             }
+            document.getElementById('preview-container').style.display = 'flex';
         }
 
         function clearFile() {
-            attachedFile = null;
+            attachedFileContent = null;
+            attachedImageBase64 = null;
             document.getElementById('file-input').value = '';
             document.getElementById('preview-container').style.display = 'none';
         }
@@ -134,75 +191,70 @@
             }
         }
 
-        async function toBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result.split(',')[1]);
-                reader.onerror = error => reject(error);
-            });
-        }
-
         async function sendMessage() {
             const input = document.getElementById('user-input');
-            const text = input.value.trim();
-            if (!text && !attachedFile) return;
+            let text = input.value.trim();
+            if (!text && !attachedFileContent && !attachedImageBase64) return;
 
-            let parts = [];
-            let displayMessage = text;
-
-            if (text) {
-                parts.push({ text: `[Contexto - Especialidade Ativa: ${currentAgent}] ${text}` });
+            if (attachedFileContent) {
+                text += attachedFileContent;
             }
 
-            if (attachedFile) {
-                const base64Data = await toBase64(attachedFile);
-                parts.push({
-                    inlineData: {
-                        mimeType: attachedFile.type,
-                        data: base64Data
-                    }
-                });
-                displayMessage += ` [📎 Ficheiro anexado: ${attachedFile.name}]`;
+            let parts = [{ text: text }];
+            if (attachedImageBase64) {
+                parts.push({ inlineData: attachedImageBase64 });
             }
 
-            appendMessage(displayMessage, 'user');
-            chatHistory.push({ role: 'user', parts: parts });
+            appendMessage(text, 'user', false);
+
+            if (!chatHistories[currentAgent]) chatHistories[currentAgent] = [];
+            chatHistories[currentAgent].push({ role: 'user', parts: parts });
+            saveHistories();
 
             input.value = '';
             clearFile();
 
-            const loadingId = appendMessage('A processar com redundância ativada...', 'bot loading');
+            const loadingId = appendMessage('A processar resposta...', 'bot loading', false);
 
             try {
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ history: chatHistory })
+                    body: JSON.stringify({
+                        history: chatHistories[currentAgent],
+                        systemInstruction: agentInstructions[currentAgent]
+                    })
                 });
 
                 const data = await response.json();
                 removeMessage(loadingId);
 
                 if (response.ok) {
-                    appendMessage(data.text, 'bot');
-                    chatHistory.push({ role: 'model', parts: [{ text: data.text }] });
+                    appendMessage(data.text, 'bot', true);
+                    chatHistories[currentAgent].push({ role: 'model', parts: [{ text: data.text }] });
+                    saveHistories();
                 } else {
-                    appendMessage(`⚠️ Erro: ${data.error || 'Falha na resposta do servidor.'}`, 'bot');
+                    appendMessage(`⚠️ Erro: ${data.error || 'Falha na resposta.'}`, 'bot', false);
                 }
             } catch (err) {
                 removeMessage(loadingId);
-                appendMessage('❌ Erro de conexão com o servidor da Vercel.', 'bot');
+                appendMessage('❌ Erro de conexão com o servidor da Vercel.', 'bot', false);
             }
         }
 
-        function appendMessage(text, sender) {
+        function appendMessage(text, sender, isMarkdown) {
             const messagesDiv = document.getElementById('chat-messages');
             const msgDiv = document.createElement('div');
             const msgId = 'msg-' + Date.now();
             msgDiv.id = msgId;
             msgDiv.className = `message ${sender}`;
-            msgDiv.innerText = text;
+
+            if (isMarkdown && sender === 'bot') {
+                msgDiv.innerHTML = marked.parse(text);
+            } else {
+                msgDiv.innerText = text;
+            }
+
             messagesDiv.appendChild(msgDiv);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
             return msgId;
@@ -212,6 +264,15 @@
             const el = document.getElementById(id);
             if (el) el.remove();
         }
+
+        function saveHistories() {
+            localStorage.setItem('chat_histories', JSON.stringify(chatHistories));
+        }
+
+        // Inicializa ao carregar a página
+        window.onload = () => {
+            loadCurrentHistory();
+        };
     </script>
 </body>
 </html>
