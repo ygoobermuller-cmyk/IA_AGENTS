@@ -1,45 +1,78 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Multi-Agent AI Hub</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- FontAwesome & Google Fonts -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Marked.js para renderizar Markdown do Gemini -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
         }
 
         .chat-container {
-            height: calc(100vh - 180px);
+            height: calc(100vh - 160px);
         }
 
-        /* Custom scrollbar for chat */
-        .chat-container::-webkit-scrollbar {
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
             width: 6px;
+            height: 6px;
         }
-        .chat-container::-webkit-scrollbar-track {
+        ::-webkit-scrollbar-track {
             background: transparent;
         }
-        .chat-container::-webkit-scrollbar-thumb {
-            background-color: #cbd5e1;
+        ::-webkit-scrollbar-thumb {
+            background-color: rgba(156, 163, 175, 0.5);
             border-radius: 10px;
         }
+        .dark ::-webkit-scrollbar-thumb {
+            background-color: rgba(75, 85, 99, 0.5);
+        }
 
+        /* Typing Indicator Animation */
         .typing-indicator span {
             display: inline-block;
             width: 6px;
             height: 6px;
-            background-color: #94a3b8;
+            background-color: currentColor;
             border-radius: 50%;
             margin: 0 2px;
             animation: bounce 1.4s infinite ease-in-out both;
+            opacity: 0.7;
         }
-
         .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
         .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
 
@@ -48,45 +81,80 @@
             40% { transform: scale(1); }
         }
 
-        .message-content {
-            white-space: pre-wrap; /* Preserves line breaks from the API */
-            word-wrap: break-word;
+        /* Markdown Styles for Chat */
+        .prose pre {
+            background-color: #1e293b;
+            color: #f8fafc;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
         }
+        .prose code {
+            background-color: rgba(0,0,0,0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+        }
+        .dark .prose code {
+            background-color: rgba(255,255,255,0.1);
+        }
+        .prose p { margin-bottom: 0.5rem; }
+        .prose p:last-child { margin-bottom: 0; }
+        .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.5rem; }
+        .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.5rem; }
     </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center h-screen w-full">
+<body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-300 flex items-center justify-center h-screen w-full">
 
-    <div class="w-full max-w-4xl bg-white rounded-2xl shadow-2xl flex flex-col h-[95vh] sm:h-[90vh] overflow-hidden border border-gray-200 m-4">
+    <!-- Main Application Container -->
+    <div class="w-full max-w-5xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl flex flex-col h-[95vh] sm:h-[90vh] overflow-hidden border border-gray-200 dark:border-gray-700 m-4 transition-colors duration-300">
         
         <!-- Header -->
-        <div class="bg-indigo-600 text-white p-4 flex flex-col sm:flex-row justify-between items-center shadow-md z-10">
+        <header class="bg-brand-600 dark:bg-brand-900 text-white p-4 flex flex-col sm:flex-row justify-between items-center shadow-md z-10 transition-colors duration-300">
             <div class="flex items-center gap-3 mb-3 sm:mb-0">
-                <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm shadow-inner">
                     <i class="fa-solid fa-robot text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold leading-tight">AI Multi-Agent</h1>
-                    <p class="text-xs text-indigo-200">Plataforma de Assistentes Especializados</p>
+                    <h1 class="text-xl font-bold leading-tight tracking-wide">AI Multi-Agent</h1>
+                    <p class="text-xs text-brand-200 dark:text-brand-100">Plataforma Especializada</p>
                 </div>
             </div>
             
-            <div class="flex items-center gap-2 bg-white/10 rounded-lg p-1 px-2 border border-white/20">
-                <label for="agent-select" class="text-sm font-medium"><i class="fa-solid fa-users-gear mr-1"></i> Agente:</label>
-                <select id="agent-select" class="bg-transparent text-white text-sm font-semibold focus:outline-none cursor-pointer p-1 [&>option]:text-gray-800">
-                    <option value="geral">Assistente Geral</option>
-                    <option value="sistemas">Especialista em Sistemas</option>
-                </select>
+            <div class="flex items-center gap-3">
+                <!-- Agent Selector -->
+                <div class="flex items-center gap-2 bg-white/10 hover:bg-white/20 transition-colors rounded-lg p-1.5 px-3 border border-white/20">
+                    <label for="agent-select" class="text-sm font-medium cursor-pointer"><i class="fa-solid fa-users-gear mr-1"></i> Agente:</label>
+                    <select id="agent-select" class="bg-transparent text-white text-sm font-semibold focus:outline-none cursor-pointer [&>option]:text-gray-800 dark:[&>option]:text-white dark:[&>option]:bg-gray-800 outline-none border-none">
+                        <option value="geral">Assistente Geral</option>
+                        <option value="sistemas">Especialista de Sistemas</option>
+                        <option value="codigo">Revisor de Código</option>
+                    </select>
+                </div>
+
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" class="w-9 h-9 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg border border-white/20 transition-colors" title="Alternar Tema">
+                    <i class="fa-solid fa-moon text-sm"></i>
+                </button>
+
+                <!-- Settings Button -->
+                <button id="settings-btn" class="w-9 h-9 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg border border-white/20 transition-colors" title="Definições">
+                    <i class="fa-solid fa-gear text-sm"></i>
+                </button>
             </div>
-        </div>
+        </header>
 
         <!-- Chat Area -->
-        <div id="chat-window" class="chat-container overflow-y-auto p-4 sm:p-6 flex-1 bg-slate-50 flex flex-col gap-4">
+        <main id="chat-window" class="chat-container overflow-y-auto p-4 sm:p-6 flex-1 bg-slate-50 dark:bg-gray-800 flex flex-col gap-6 transition-colors duration-300">
             <!-- Messages will be injected here -->
-        </div>
+        </main>
 
-        <!-- Loading Indicator (Hidden by default) -->
-        <div id="loading-indicator" class="hidden px-6 py-2 bg-slate-50">
-            <div class="bg-gray-200 rounded-2xl rounded-bl-none px-4 py-3 inline-block w-fit">
+        <!-- Loading Indicator -->
+        <div id="loading-indicator" class="hidden px-6 pb-4 bg-slate-50 dark:bg-gray-800 transition-colors duration-300">
+            <div class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-2xl rounded-bl-none px-4 py-3 inline-block w-fit">
                 <div class="typing-indicator flex items-center h-5">
                     <span></span><span></span><span></span>
                 </div>
@@ -94,26 +162,61 @@
         </div>
 
         <!-- Input Area -->
-        <div class="bg-white border-t border-gray-200 p-4">
-            <form id="chat-form" class="flex gap-2 relative">
+        <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 transition-colors duration-300">
+            <form id="chat-form" class="flex gap-2 relative max-w-4xl mx-auto">
                 <input 
                     type="text" 
                     id="user-input" 
-                    placeholder="Digite sua mensagem para o agente..." 
-                    class="w-full bg-gray-100 border border-gray-300 text-gray-800 rounded-full pl-5 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-inner"
+                    placeholder="Digite a sua mensagem para o agente..." 
+                    class="w-full bg-gray-100 dark:bg-gray-700 border border-transparent dark:border-gray-600 text-gray-800 dark:text-white rounded-full pl-5 pr-14 py-3 sm:py-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-gray-800 transition-all shadow-inner placeholder-gray-400 dark:placeholder-gray-400"
                     autocomplete="off"
-                    required
                 >
                 <button 
                     type="submit" 
                     id="send-btn"
-                    class="absolute right-2 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center transition-colors shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    class="absolute right-2 top-1/2 transform -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-brand-600 hover:bg-brand-700 text-white rounded-full flex items-center justify-center transition-colors shadow-md disabled:bg-gray-400 disabled:dark:bg-gray-600 disabled:cursor-not-allowed"
                 >
-                    <i class="fa-solid fa-paper-plane text-sm"></i>
+                    <i class="fa-solid fa-paper-plane text-sm sm:text-base -ml-1"></i>
                 </button>
             </form>
             <div class="text-center mt-2">
-                <span class="text-[10px] text-gray-400">Powered by Gemini API</span>
+                <span class="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Powered by Gemini API</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-white dark:bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300" id="modal-content">
+            <div class="bg-brand-600 dark:bg-brand-900 p-4 flex justify-between items-center text-white">
+                <h2 class="font-bold text-lg"><i class="fa-solid fa-sliders mr-2"></i> Definições</h2>
+                <button id="close-settings" class="text-white/80 hover:text-white transition-colors">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2" for="api-key-input">
+                        Chave de API do Google Gemini
+                    </label>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                        A sua chave é guardada apenas localmente no seu navegador e não é enviada para nenhum servidor nosso.
+                    </p>
+                    <input 
+                        type="password" 
+                        id="api-key-input" 
+                        class="w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none text-gray-800 dark:text-white transition-colors"
+                        placeholder="AIzaSy..."
+                    >
+                </div>
+                <div class="flex items-center gap-2 mt-6">
+                    <button id="save-settings" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-lg transition-colors shadow-sm">
+                        Guardar Definições
+                    </button>
+                </div>
+                <div id="save-status" class="text-center text-sm font-medium mt-3 text-green-600 dark:text-green-400 hidden animate-pulse">
+                    Guardado com sucesso!
+                </div>
             </div>
         </div>
     </div>
@@ -124,27 +227,29 @@
             "geral": {
                 name: "Assistente Geral",
                 icon: "fa-regular fa-comments",
-                color: "bg-blue-500",
-                welcomeMessage: "Olá! Sou seu Assistente Geral. Posso te ajudar com dúvidas cotidianas, traduções, resumos, receitas e muito mais. Como posso ser útil hoje?",
-                systemInstruction: "Você é um assistente virtual amigável, claro e prestativo. Seu objetivo é ajudar o usuário com perguntas gerais do dia a dia, curiosidades, conselhos práticos e conhecimentos gerais. Responda de forma concisa e educada, usando formatação simples e agradável."
+                bgColor: "bg-blue-500",
+                welcomeMessage: "Olá! Sou o seu Assistente Geral. Posso ajudá-lo com dúvidas quotidianas, traduções, resumos e muito mais. Como posso ser útil hoje?",
+                systemInstruction: "És um assistente virtual amigável, claro e prestativo. O teu objetivo é ajudar o utilizador com perguntas gerais do dia a dia. Responde sempre em Português de Portugal de forma concisa, educada e bem formatada."
             },
             "sistemas": {
-                name: "Especialista em Sistemas",
+                name: "Especialista de Sistemas",
                 icon: "fa-solid fa-network-wired",
-                color: "bg-emerald-600",
-                welcomeMessage: "Saudações. Sou o Especialista em Sistemas e Integrações. Pronto para analisar arquiteturas, solucionar problemas em ERPs corporativos (SAP, TOTVS, Salesforce) e discutir fluxos de dados. Qual o desafio técnico de hoje?",
-                systemInstruction: "Você é um Especialista em Sistemas Sênior e Arquiteto de Integrações. Seu foco é analisar dados, arquitetura de software, ERPs corporativos (como SAP, TOTVS, Oracle, Salesforce), bancos de dados (SQL/NoSQL) e integrações de APIs (REST/SOAP/GraphQL). Forneça respostas técnicas, precisas, bem estruturadas e com exemplos de código ou consultas quando aplicável. Assuma que o usuário tem conhecimento técnico moderado a avançado. Seja direto e analítico."
+                bgColor: "bg-emerald-600",
+                welcomeMessage: "Saudações. Sou o Especialista de Sistemas e Integrações. Pronto para analisar arquiteturas, solucionar problemas em ERPs corporativos (SAP, TOTVS, Salesforce) e discutir fluxos de dados. Qual é o desafio técnico de hoje?",
+                systemInstruction: "És um Especialista em Sistemas Sénior e Arquiteto de Integrações. O teu foco é analisar dados, arquitetura de software, ERPs corporativos, bases de dados e integrações de APIs. Fornece respostas técnicas, precisas e bem estruturadas em Português de Portugal. Usa Markdown para destacar código ou conceitos."
+            },
+            "codigo": {
+                name: "Revisor de Código",
+                icon: "fa-solid fa-code",
+                bgColor: "bg-purple-600",
+                welcomeMessage: "Olá, dev! Sou o Revisor de Código. Cola aqui a tua função, script ou bloco de código. Analisarei vulnerabilidades, complexidade ciclomática, boas práticas de Clean Code e sugerirei otimizações.",
+                systemInstruction: "És um Engenheiro de Software Staff/Principal altamente rigoroso. A tua função é fazer Code Review. Analisa o código do utilizador à procura de bugs, más práticas, problemas de segurança e performance. Sugere melhorias mostrando o código refatorado usando blocos de código Markdown apropriados. Responde em Português de Portugal técnico."
             }
         };
 
         // Estado da aplicação
         let currentAgentId = 'geral';
-        // Dicionário para armazenar o histórico de cada agente separadamente
-        const chatHistories = {
-            "geral": [],
-            "sistemas": []
-        };
-        const apiKey = ""; // Canvas will inject API Key here
+        const chatHistories = { "geral": [], "sistemas": [], "codigo": [] };
         let isWaitingForResponse = false;
 
         // Elementos do DOM
@@ -154,38 +259,57 @@
         const sendBtn = document.getElementById('send-btn');
         const agentSelect = document.getElementById('agent-select');
         const loadingIndicator = document.getElementById('loading-indicator');
+        const themeToggle = document.getElementById('theme-toggle');
+        const htmlElement = document.documentElement;
+        
+        // Elementos do Modal
+        const settingsModal = document.getElementById('settings-modal');
+        const modalContent = document.getElementById('modal-content');
+        const settingsBtn = document.getElementById('settings-btn');
+        const closeSettings = document.getElementById('close-settings');
+        const apiKeyInput = document.getElementById('api-key-input');
+        const saveSettings = document.getElementById('save-settings');
+        const saveStatus = document.getElementById('save-status');
 
         
-        // Função para rolar o chat para baixo
+        // Rolar para o fim do chat
         function scrollToBottom() {
             chatWindow.scrollTop = chatWindow.scrollHeight;
         }
 
-        // Adiciona uma mensagem na interface (UI)
+        // Recuperar API Key do LocalStorage
+        function getApiKey() {
+            return localStorage.getItem('gemini_api_key') || '';
+        }
+
+        // Renderiza mensagem na UI
         function renderMessage(text, sender, agentId = null) {
             const messageDiv = document.createElement('div');
-            messageDiv.classList.add('flex', 'w-full', 'mb-2', 'animate-fade-in');
+            messageDiv.classList.add('flex', 'w-full', 'animate-[fadeIn_0.3s_ease-out_forwards]');
             
             const isUser = sender === 'user';
             
             if (isUser) {
                 messageDiv.classList.add('justify-end');
                 messageDiv.innerHTML = `
-                    <div class="max-w-[80%] bg-indigo-600 text-white rounded-2xl rounded-br-none px-4 py-3 shadow-sm">
-                        <p class="text-sm message-content">${escapeHTML(text)}</p>
+                    <div class="max-w-[85%] sm:max-w-[75%] bg-brand-600 text-white rounded-2xl rounded-br-sm px-5 py-3.5 shadow-md">
+                        <p class="text-[15px] leading-relaxed whitespace-pre-wrap">${escapeHTML(text)}</p>
                     </div>
                 `;
             } else {
                 const agent = agentsConfig[agentId] || agentsConfig['geral'];
+                // Transforma Markdown em HTML seguro usando marked.js
+                const parsedContent = marked.parse(text);
+
                 messageDiv.classList.add('justify-start');
                 messageDiv.innerHTML = `
-                    <div class="flex items-end gap-2 max-w-[85%]">
-                        <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs ${agent.color} shadow-sm mb-1">
+                    <div class="flex items-end gap-3 max-w-[95%] sm:max-w-[85%]">
+                        <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white text-sm ${agent.bgColor} shadow-md mb-1">
                             <i class="${agent.icon}"></i>
                         </div>
-                        <div class="bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-bl-none px-4 py-3 shadow-sm">
-                            <div class="text-xs font-bold mb-1 text-gray-500">${agent.name}</div>
-                            <p class="text-sm message-content">${formatText(escapeHTML(text))}</p>
+                        <div class="bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-800 dark:text-gray-100 rounded-2xl rounded-bl-sm px-5 py-3.5 shadow-md overflow-x-auto">
+                            <div class="text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 tracking-wide uppercase">${agent.name}</div>
+                            <div class="text-[15px] leading-relaxed prose dark:prose-invert max-w-none message-content">${parsedContent}</div>
                         </div>
                     </div>
                 `;
@@ -195,25 +319,12 @@
             scrollToBottom();
         }
 
-        // Escapa HTML para prevenir XSS simples
         function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, 
-                tag => ({
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    "'": '&#39;',
-                    '"': '&quot;'
-                }[tag] || tag)
-            );
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag] || tag));
         }
 
-        // Formatação básica (Transforma **texto** em negrito) - Opcional, para melhorar visualização
-        function formatText(text) {
-            return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        }
-
-        // Alternar status de carregamento
         function setLoading(isLoading) {
             isWaitingForResponse = isLoading;
             userInput.disabled = isLoading;
@@ -227,16 +338,13 @@
             }
         }
 
-        // Renderiza o histórico atual do agente selecionado
         function loadAgentChat() {
-            chatWindow.innerHTML = ''; // Limpa a tela
+            chatWindow.innerHTML = '';
             const history = chatHistories[currentAgentId];
             const agent = agentsConfig[currentAgentId];
 
-            // Renderiza mensagem de boas-vindas
             renderMessage(agent.welcomeMessage, 'model', currentAgentId);
 
-            // Renderiza o histórico armazenado
             history.forEach(msg => {
                 if (msg.role === 'user') {
                     renderMessage(msg.parts[0].text, 'user');
@@ -247,19 +355,25 @@
         }
 
         
-        // Chamada à API do Gemini
         async function fetchGeminiResponse(userText) {
+            const apiKey = getApiKey();
             const agent = agentsConfig[currentAgentId];
+            
+            if (!apiKey) {
+                setTimeout(() => {
+                    renderMessage("⚠️ **Erro:** Não encontrei a sua chave de API. Por favor, clique no ícone de definições (⚙️) no topo para inserir a sua chave do Google Gemini e tentar novamente.", 'model', currentAgentId);
+                    setLoading(false);
+                }, 600);
+                return;
+            }
+
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
             
-            // Constrói o payload com as instruções de sistema e histórico atual
             const payload = {
-                systemInstruction: {
-                    parts: [{ text: agent.systemInstruction }]
-                },
+                systemInstruction: { parts: [{ text: agent.systemInstruction }] },
                 contents: [
-                    ...chatHistories[currentAgentId], // Histórico do agente
-                    { role: "user", parts: [{ text: userText }] } // Nova mensagem
+                    ...chatHistories[currentAgentId],
+                    { role: "user", parts: [{ text: userText }] }
                 ]
             };
 
@@ -270,21 +384,20 @@
                     body: JSON.stringify(payload)
                 });
 
+                const result = await response.json();
+
                 if (!response.ok) {
-                    throw new Error(`Erro HTTP: ${response.status}`);
+                    throw new Error(result.error?.message || `Erro HTTP: ${response.status}`);
                 }
 
-                const result = await response.json();
                 const candidate = result.candidates?.[0];
 
                 if (candidate && candidate.content?.parts?.[0]?.text) {
                     const aiText = candidate.content.parts[0].text;
                     
-                    // Atualiza o histórico localmente (Memória do Agente)
                     chatHistories[currentAgentId].push({ role: "user", parts: [{ text: userText }] });
                     chatHistories[currentAgentId].push({ role: "model", parts: [{ text: aiText }] });
 
-                    // Renderiza a resposta
                     renderMessage(aiText, 'model', currentAgentId);
                 } else {
                     renderMessage("Desculpe, recebi uma resposta vazia ou em formato inesperado da API.", 'model', currentAgentId);
@@ -292,14 +405,23 @@
 
             } catch (error) {
                 console.error("Erro na API:", error);
-                renderMessage("Desculpe, ocorreu um erro ao comunicar com os servidores. Verifique o console para mais detalhes.", 'model', currentAgentId);
+                // Mensagem customizada de erro baseada no que falhou
+                let errorMsg = "Ocorreu um erro ao comunicar com os servidores do Gemini.";
+                if (error.message.includes("API key not valid")) {
+                    errorMsg = "A chave de API inserida é inválida. Por favor, verifique nas definições.";
+                } else {
+                    errorMsg += `<br><br><small class="text-red-500 font-mono">${escapeHTML(error.message)}</small>`;
+                }
+                renderMessage(errorMsg, 'model', currentAgentId);
+                
+                // Remove the user message from history since it failed
+                // chatHistories doesn't have it pushed yet anyway based on current logic flow.
             } finally {
                 setLoading(false);
             }
         }
 
-
-        // Evento de envio do formulário
+        
         chatForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (isWaitingForResponse) return;
@@ -307,39 +429,85 @@
             const text = userInput.value.trim();
             if (!text) return;
 
-            // Limpa o input
             userInput.value = '';
-            
-            // Mostra a mensagem do usuário
             renderMessage(text, 'user');
-            
-            // Inicia o estado de loading e chama a API
             setLoading(true);
             await fetchGeminiResponse(text);
         });
 
-        // Evento de troca de agente
         agentSelect.addEventListener('change', (e) => {
             currentAgentId = e.target.value;
-            loadAgentChat(); // Recarrega o contexto e a UI
+            loadAgentChat();
         });
+
+        // Configurações Modal Logic
+        function openModal() {
+            apiKeyInput.value = getApiKey();
+            settingsModal.classList.remove('hidden');
+            setTimeout(() => {
+                settingsModal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeModal() {
+            settingsModal.classList.add('opacity-0');
+            modalContent.classList.add('scale-95');
+            saveStatus.classList.add('hidden');
+            setTimeout(() => {
+                settingsModal.classList.add('hidden');
+            }, 300);
+        }
+
+        settingsBtn.addEventListener('click', openModal);
+        closeSettings.addEventListener('click', closeModal);
+        
+        settingsModal.addEventListener('click', (e) => {
+            if(e.target === settingsModal) closeModal();
+        });
+
+        saveSettings.addEventListener('click', () => {
+            const key = apiKeyInput.value.trim();
+            localStorage.setItem('gemini_api_key', key);
+            saveStatus.classList.remove('hidden');
+            setTimeout(() => closeModal(), 1500);
+        });
+
+        // Theme Logic
+        function toggleTheme() {
+            if (htmlElement.classList.contains('dark')) {
+                htmlElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+                themeToggle.innerHTML = '<i class="fa-solid fa-moon text-sm"></i>';
+            } else {
+                htmlElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                themeToggle.innerHTML = '<i class="fa-solid fa-sun text-sm"></i>';
+            }
+        }
+
+        themeToggle.addEventListener('click', toggleTheme);
 
         // Inicialização
         window.onload = () => {
-            // Carrega o agente inicial
+            // Verificar tema salvo
+            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                htmlElement.classList.add('dark');
+                themeToggle.innerHTML = '<i class="fa-solid fa-sun text-sm"></i>';
+            }
+            
+            // Configurar o marked.js para abrir links numa nova aba, etc (opcional, manter simples)
+            marked.setOptions({ breaks: true });
+
             loadAgentChat();
-            userInput.focus();
         };
 
-        // Adicionando um pequeno estilo de fade in dinamico via JS
+        // Injecting global animation styles dynamically just in case Tailwind arbitrary values miss it
         const style = document.createElement('style');
         style.innerHTML = `
             @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(10px); }
+                from { opacity: 0; transform: translateY(8px); }
                 to { opacity: 1; transform: translateY(0); }
-            }
-            .animate-fade-in {
-                animation: fadeIn 0.3s ease-out forwards;
             }
         `;
         document.head.appendChild(style);
