@@ -8,36 +8,39 @@ export default async function handler(req, res) {
     if (!history || history.length === 0) return res.status(400).json({ error: 'Histórico vazio.' });
 
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: 'Chave API não configurada.' });
+    if (!apiKey) return res.status(500).json({ error: 'Chave API não configurada na Vercel.' });
 
-    // 1. SANITIZAÇÃO BLINDADA (Acaba com o erro 400 por histórico corrompido)
+    // 1. SANITIZAÇÃO ABSOLUTA: Junta mensagens seguidas para nunca dar Erro 400
     const safeHistory = [];
-    let currentRole = null;
     for (const msg of history) {
-        // Ignora mensagens seguidas da mesma pessoa para não irritar a API da Google
-        if (msg.role !== currentRole) {
-            safeHistory.push({ role: msg.role, parts: msg.parts });
-            currentRole = msg.role;
+        if (safeHistory.length > 0 && safeHistory[safeHistory.length - 1].role === msg.role) {
+            safeHistory[safeHistory.length - 1].parts.push(...msg.parts);
+        } else {
+            safeHistory.push({ role: msg.role, parts: [...msg.parts] });
         }
     }
     
-    // A Google exige que a última mensagem seja sempre do utilizador
+    // A Google exige que termine sempre consigo (user)
     if (safeHistory.length > 0 && safeHistory[safeHistory.length - 1].role !== 'user') {
          safeHistory.pop();
     }
 
-    if (safeHistory.length === 0) return res.status(400).json({ error: 'Sincronização falhou. Atualize a página.' });
+    if (safeHistory.length === 0) return res.status(400).json({ error: 'Erro no histórico. Por favor limpe o chat.' });
 
-    // Fixo exclusivamente no modelo oficial mais rápido
+    // 2. O TRUQUE INFALÍVEL: Injeta a especialidade do agente de forma invisível na primeira mensagem
+    if (systemInstruction) {
+        safeHistory[0].parts.unshift({ text: `[DIRETRIZ DE SISTEMA: ${systemInstruction}]\n\n` });
+    }
+
+    // Usando APENAS o modelo rápido garantido
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     const payload = { contents: safeHistory };
-    if (systemInstruction) payload.systemInstruction = { parts: [{ text: systemInstruction }] };
 
-    // 2. RETRY SILENCIOSO (Acaba com o erro 503 na cara do utilizador)
-    let maxAttempts = 3;
     let lastError = "";
+    let finalStatus = 500;
 
-    for (let i = 1; i <= maxAttempts; i++) {
+    // 3. Tenta até 3 vezes se o servidor estiver mesmo ocupado
+    for (let i = 1; i <= 3; i++) {
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -50,20 +53,20 @@ export default async function handler(req, res) {
         }
 
         lastError = await response.text();
-        const status = response.status;
+        finalStatus = response.status;
 
-        // Se for erro de formato (400) ou chave bloqueada (403), não vale a pena insistir
-        if (status === 400 || status === 403 || status === 404) break;
+        // Se for erro de formato (400) ou chave inválida (403), sai logo para mostrar o problema real
+        if (finalStatus === 400 || finalStatus === 403 || finalStatus === 404) break;
 
-        // Se for erro de servidor da Google (503), espera 1.5s e tenta novamente
-        await new Promise(r => setTimeout(r, 1500 * i));
+        await new Promise(r => setTimeout(r, 1000 * i));
     }
 
+    // 4. MOSTRA O ERRO VERDADEIRO E EXATO DA GOOGLE PARA SABERMOS O QUE SE PASSA
     let msg = lastError;
     try { msg = JSON.parse(lastError).error.message; } catch(e){}
-    return res.status(500).json({ error: `Servidores da Google ocupados. Tente enviar de novo.` });
+    return res.status(finalStatus).json({ error: `Recusado pela API da Google (Código ${finalStatus}): ${msg}` });
 
   } catch (error) {
-    return res.status(500).json({ error: 'Falha interna na Vercel.' });
+    return res.status(500).json({ error: `Falha crítica na Vercel: ${error.message}` });
   }
 }
