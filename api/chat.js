@@ -1,72 +1,79 @@
 // api/chat.js
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido.' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Método não permitido (Use POST).' });
+  }
 
   try {
-    const { history, systemInstruction } = req.body;
-    if (!history || history.length === 0) return res.status(400).json({ error: 'Histórico vazio.' });
-
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: 'Chave API não configurada na Vercel.' });
-
-    // 1. SANITIZAÇÃO ABSOLUTA: Junta mensagens seguidas para nunca dar Erro 400
-    const safeHistory = [];
-    for (const msg of history) {
-        if (safeHistory.length > 0 && safeHistory[safeHistory.length - 1].role === msg.role) {
-            safeHistory[safeHistory.length - 1].parts.push(...msg.parts);
-        } else {
-            safeHistory.push({ role: msg.role, parts: [...msg.parts] });
-        }
+    if (!apiKey) {
+      return res.status(500).json({ error: 'Chave API não configurada na Vercel.' });
     }
+
+    const { history, systemInstruction } = req.body;
+    if (!history || !Array.isArray(history) || history.length === 0) {
+      return res.status(400).json({ error: 'O histórico está vazio.' });
+    }
+
+    // 1. COMPILADOR ESTRITO DE HISTÓRICO (Previne 100% dos Erros 400 da Google)
+    const googleContents = [];
     
-    // A Google exige que termine sempre consigo (user)
-    if (safeHistory.length > 0 && safeHistory[safeHistory.length - 1].role !== 'user') {
-         safeHistory.pop();
+    for (const msg of history) {
+      // Garante que os "roles" são apenas os oficiais aceites
+      const role = (msg.role === 'model' || msg.role === 'bot') ? 'model' : 'user';
+      const text = msg.parts?.[0]?.text || '';
+      
+      if (!text.trim()) continue; // Ignora anomalias vazias
+
+      // Se a mensagem for do mesmo autor que a anterior, agrupa os textos automaticamente.
+      // (Isto impede o erro fatal da Google quando há dois 'user' seguidos após uma falha de conexão)
+      if (googleContents.length > 0 && googleContents[googleContents.length - 1].role === role) {
+        googleContents[googleContents.length - 1].parts[0].text += `\n\n${text}`;
+      } else {
+        googleContents.push({ role, parts: [{ text }] });
+      }
     }
 
-    if (safeHistory.length === 0) return res.status(400).json({ error: 'Erro no histórico. Por favor limpe o chat.' });
+    // A regra de ouro da Google: o array tem de acabar SEMPRE com o utilizador
+    if (googleContents.length > 0 && googleContents[googleContents.length - 1].role !== 'user') {
+      googleContents.pop();
+    }
 
-    // 2. O TRUQUE INFALÍVEL: Injeta a especialidade do agente de forma invisível na primeira mensagem
+    if (googleContents.length === 0) {
+      return res.status(400).json({ error: 'Nenhuma instrução válida enviada.' });
+    }
+
+    // 2. MONTAGEM DA PERSONA E PAYLOAD (Padrão Oficial v1beta)
+    const payload = { contents: googleContents };
     if (systemInstruction) {
-        safeHistory[0].parts.unshift({ text: `[DIRETRIZ DE SISTEMA: ${systemInstruction}]\n\n` });
+      payload.systemInstruction = { parts: [{ text: systemInstruction }] };
     }
 
-    // Usando APENAS o modelo rápido garantido
+    // 3. CONEXÃO DIRETA E RÁPIDA (Sem loops que causam Timeout na Vercel)
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-    const payload = { contents: safeHistory };
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
 
-    let lastError = "";
-    let finalStatus = 500;
+    const responseText = await response.text();
 
-    // 3. Tenta até 3 vezes se o servidor estiver mesmo ocupado
-    for (let i = 1; i <= 3; i++) {
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            return res.status(200).json({ text: data.candidates[0].content.parts[0].text });
-        }
-
-        lastError = await response.text();
-        finalStatus = response.status;
-
-        // Se for erro de formato (400) ou chave inválida (403), sai logo para mostrar o problema real
-        if (finalStatus === 400 || finalStatus === 403 || finalStatus === 404) break;
-
-        await new Promise(r => setTimeout(r, 1000 * i));
+    if (!response.ok) {
+      let errorMsg = responseText;
+      try { errorMsg = JSON.parse(responseText).error.message; } catch (e) {}
+      return res.status(response.status).json({ error: `Recusado pela Google: ${errorMsg}` });
     }
 
-    // 4. MOSTRA O ERRO VERDADEIRO E EXATO DA GOOGLE PARA SABERMOS O QUE SE PASSA
-    let msg = lastError;
-    try { msg = JSON.parse(lastError).error.message; } catch(e){}
-    return res.status(finalStatus).json({ error: `Recusado pela API da Google (Código ${finalStatus}): ${msg}` });
+    const data = JSON.parse(responseText);
+    const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "Processado sem retorno de texto.";
+
+    return res.status(200).json({ text: textResponse });
 
   } catch (error) {
-    return res.status(500).json({ error: `Falha crítica na Vercel: ${error.message}` });
+    console.error("Vercel Crash:", error);
+    return res.status(500).json({ error: `Falha interna de servidor: ${error.message}` });
   }
 }
