@@ -1,101 +1,109 @@
 // api/chat.js
 
 module.exports = async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Método não permitido (Use POST).' });
-  }
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido.' });
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: 'Chave API não configurada na Vercel.' });
-    }
-
-    const { history, systemInstruction } = req.body;
+    // Agora recebemos também o "provider" (google ou openai) da interface
+    const { history, systemInstruction, provider = 'google' } = req.body;
+    
     if (!history || !Array.isArray(history) || history.length === 0) {
       return res.status(400).json({ error: 'O histórico está vazio.' });
     }
 
-    // 1. COMPILADOR ESTRITO DE HISTÓRICO (Blinda contra erros 400)
-    const googleContents = [];
-    for (const msg of history) {
-      const role = (msg.role === 'model' || msg.role === 'bot') ? 'model' : 'user';
-      const text = msg.parts?.[0]?.text || '';
-      
-      if (!text.trim()) continue;
+    // ==========================================
+    // 🧠 ROTA 1: OPENAI (GPT-4o)
+    // ==========================================
+    if (provider === 'openai') {
+        const openaiKey = process.env.OPENAI_API_KEY;
+        if (!openaiKey) return res.status(500).json({ error: 'Chave OPENAI não configurada na Vercel.' });
 
-      if (googleContents.length > 0 && googleContents[googleContents.length - 1].role === role) {
-        googleContents[googleContents.length - 1].parts[0].text += `\n\n${text}`;
-      } else {
-        googleContents.push({ role, parts: [{ text }] });
-      }
+        const messages = [];
+        if (systemInstruction) messages.push({ role: "system", content: systemInstruction });
+        
+        for (const msg of history) {
+            const role = (msg.role === 'model' || msg.role === 'bot') ? 'assistant' : 'user';
+            const content = msg.parts?.[0]?.text || '';
+            if (content.trim()) messages.push({ role, content });
+        }
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'Authorization': `Bearer ${openaiKey}` 
+            },
+            // Usamos o GPT-4o original, o mais potente da atualidade
+            body: JSON.stringify({ model: 'gpt-4o', messages }) 
+        });
+
+        const responseText = await response.text();
+        if (!response.ok) {
+            let err = responseText;
+            try { err = JSON.parse(responseText).error.message; } catch(e){}
+            return res.status(response.status).json({ error: `Erro OpenAI: ${err}` });
+        }
+        
+        const data = JSON.parse(responseText);
+        return res.status(200).json({ text: data.choices[0].message.content });
     }
 
-    if (googleContents.length > 0 && googleContents[googleContents.length - 1].role !== 'user') {
-      googleContents.pop();
+    // ==========================================
+    // 🧠 ROTA 2: GOOGLE GEMINI (Dinâmico e Blindado)
+    // ==========================================
+    if (provider === 'google') {
+        const geminiKey = process.env.GEMINI_API_KEY;
+        if (!geminiKey) return res.status(500).json({ error: 'Chave GEMINI não configurada.' });
+
+        const googleContents = [];
+        for (const msg of history) {
+            const role = (msg.role === 'model' || msg.role === 'bot') ? 'model' : 'user';
+            const text = msg.parts?.[0]?.text || '';
+            if (!text.trim()) continue;
+
+            if (googleContents.length > 0 && googleContents[googleContents.length - 1].role === role) {
+                googleContents[googleContents.length - 1].parts[0].text += `\n\n${text}`;
+            } else {
+                googleContents.push({ role, parts: [{ text }] });
+            }
+        }
+
+        if (googleContents.length > 0 && googleContents[googleContents.length - 1].role !== 'user') googleContents.pop();
+        if (googleContents.length === 0) return res.status(400).json({ error: 'Histórico inválido.' });
+
+        const payload = { contents: googleContents };
+        if (systemInstruction) payload.systemInstruction = { parts: [{ text: systemInstruction }] };
+
+        // Busca o modelo Gemini disponível
+        const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`);
+        if (!listRes.ok) return res.status(500).json({ error: 'Chave Gemini rejeitada.' });
+        
+        const listData = await listRes.json();
+        const validModels = listData.models.filter(m => m.supportedGenerationMethods?.includes('generateContent') && m.name.includes('gemini'));
+        if (validModels.length === 0) return res.status(500).json({ error: 'Nenhum Gemini autorizado.' });
+
+        let bestModel = validModels[0].name;
+        const preferred = validModels.find(m => m.name.includes('gemini-1.5-flash')) || validModels.find(m => m.name.includes('gemini-1.5-pro'));
+        if (preferred) bestModel = preferred.name;
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/${bestModel}:generateContent?key=${geminiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const responseText = await response.text();
+        if (!response.ok) {
+            let err = responseText;
+            try { err = JSON.parse(responseText).error.message; } catch(e){}
+            return res.status(response.status).json({ error: `Erro Google: ${err}` });
+        }
+
+        const data = JSON.parse(responseText);
+        return res.status(200).json({ text: data.candidates[0].content.parts[0].text });
     }
 
-    if (googleContents.length === 0) {
-      return res.status(400).json({ error: 'Nenhuma instrução válida enviada.' });
-    }
-
-    const payload = { contents: googleContents };
-    if (systemInstruction) {
-      payload.systemInstruction = { parts: [{ text: systemInstruction }] };
-    }
-
-    // 2. BUSCA DINÂMICA DO MODELO (Acaba com o erro 404 definitivamente)
-    // O sistema pergunta à Google: "Quais modelos esta chave API pode usar agora?"
-    const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-    const listRes = await fetch(listUrl);
-    
-    if (!listRes.ok) {
-        return res.status(500).json({ error: 'A sua chave API foi rejeitada ou está inválida.' });
-    }
-    
-    const listData = await listRes.json();
-    
-    // Filtra apenas modelos reais de texto autorizados para esta chave
-    const validModels = listData.models.filter(m => 
-        m.supportedGenerationMethods?.includes('generateContent') && 
-        m.name.includes('gemini')
-    );
-
-    if (validModels.length === 0) {
-        return res.status(500).json({ error: 'A sua chave não tem permissão para usar nenhum modelo Gemini.' });
-    }
-
-    // Procura o 1.5 Flash, ou o 1.5 Pro, ou agarra o primeiro que a Google disser que funciona
-    let bestModelName = validModels[0].name; // Formato recebido: "models/nome-do-modelo"
-    const preferred = validModels.find(m => m.name.includes('gemini-1.5-flash')) || 
-                      validModels.find(m => m.name.includes('gemini-1.5-pro')) ||
-                      validModels.find(m => m.name.includes('gemini-pro'));
-    
-    if (preferred) {
-        bestModelName = preferred.name;
-    }
-
-    // 3. PEDIDO COM O MODELO 100% GARANTIDO
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/${bestModelName}:generateContent?key=${apiKey}`;
-    
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    const responseText = await response.text();
-
-    if (!response.ok) {
-      let errorMsg = responseText;
-      try { errorMsg = JSON.parse(responseText).error.message; } catch (e) {}
-      return res.status(response.status).json({ error: `Erro na geração: ${errorMsg}` });
-    }
-
-    const data = JSON.parse(responseText);
-    const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta.";
-
-    return res.status(200).json({ text: textResponse });
+    return res.status(400).json({ error: 'Motor de IA desconhecido.' });
 
   } catch (error) {
     console.error("Vercel Crash:", error);
