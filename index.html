@@ -5,103 +5,129 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Workspace Pro Enterprise</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
-            --bg-main: #050505; --bg-sidebar: #0a0a0a; --bg-panel: #121212;
-            --border-color: #27272a; --text-primary: #f4f4f5; --text-secondary: #a1a1aa;
-            --accent-blue: #3b82f6; --accent-hover: #2563eb;
+            --bg-main: #09090b; 
+            --bg-sidebar: #050507; 
+            --bg-panel: #121216;
+            --bg-hover: #1a1a21;
+            --border-color: #27272a; 
+            --border-focus: #3b82f6;
+            --text-primary: #fafafa; 
+            --text-secondary: #a1a1aa;
+            --accent-blue: #3b82f6; 
+            --accent-hover: #2563eb;
             --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-            --font-ui: 'Inter', sans-serif; --font-code: 'JetBrains Mono', monospace;
+            --font-ui: 'Plus Jakarta Sans', sans-serif; 
+            --font-code: 'JetBrains Mono', monospace;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-ui); }
         body { background-color: var(--bg-main); color: var(--text-primary); height: 100vh; display: flex; overflow: hidden; }
 
-        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
 
+        /* Sidebar Executiva */
         .sidebar { width: 280px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 16px; gap: 20px; z-index: 10; }
-        .sidebar-header h1 { font-size: 18px; font-weight: 700; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 8px; }
         
-        .btn-primary { background: var(--accent-blue); color: white; border: none; border-radius: 8px; padding: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2); display: flex; justify-content: center; align-items: center; gap: 8px;}
-        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+        .sidebar-header h1 { font-size: 17px; font-weight: 700; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 10px; letter-spacing: -0.3px; }
+        
+        .btn-primary { background: var(--accent-blue); color: white; border: none; border-radius: 10px; padding: 12px; font-weight: 600; font-size: 13.5px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25); display: flex; justify-content: center; align-items: center; gap: 8px;}
+        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35); }
 
         .form-group { display: flex; flex-direction: column; gap: 8px; }
-        .form-group label { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
-        .select-box { background: var(--bg-panel); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; font-size: 13px; outline: none; cursor: pointer; transition: border 0.2s; }
-        .select-box:focus { border-color: var(--accent-blue); }
+        .form-group label { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px; }
+        .select-box { background: var(--bg-panel); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 10px; padding: 11px; font-size: 13px; outline: none; cursor: pointer; transition: all 0.2s; }
+        .select-box:focus { border-color: var(--border-focus); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15); }
 
         .history-section { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
-        .history-section-title { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;}
-        .chat-item { padding: 12px; border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; border: 1px solid transparent; }
-        .chat-item:hover { background: rgba(255,255,255,0.03); color: var(--text-primary); }
-        .chat-item.active { background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); font-weight: 500; }
-        .delete-btn { color: #ef4444; font-size: 14px; cursor: pointer; opacity: 0; transition: opacity 0.2s; }
+        .history-section-title { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px;}
+        
+        .chat-item { padding: 11px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center; transition: all 0.15s ease; border: 1px solid transparent; }
+        .chat-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .chat-item.active { background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.25); font-weight: 500; }
+        .delete-btn { color: #ef4444; font-size: 13px; cursor: pointer; opacity: 0; transition: opacity 0.15s; padding: 2px 6px; border-radius: 4px;}
+        .delete-btn:hover { background: rgba(239, 68, 68, 0.15); }
         .chat-item:hover .delete-btn { opacity: 1; }
 
+        /* Área do Chat Principal */
         .chat-container { flex: 1; display: flex; flex-direction: column; background-color: var(--bg-main); position: relative; }
-        .chat-header { padding: 16px 30px; background: rgba(5, 5, 5, 0.8); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 5; }
-        .header-actions { display: flex; gap: 10px; }
-        .btn-export { background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;}
-        .btn-export:hover { border-color: var(--text-primary); color: var(--text-primary); background: rgba(255,255,255,0.05); }
-        .btn-clear { border-color: #ef444455; color: #ef4444; }
-        .btn-clear:hover { border-color: #ef4444; color: #fca5a5; background: #ef444411; }
+        
+        .chat-header { padding: 16px 32px; background: rgba(9, 9, 11, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 5; }
+        .header-info h3 { font-size: 15px; font-weight: 600; letter-spacing: -0.2px; }
+        .header-info span { font-size: 12px; color: var(--text-secondary); }
 
-        .chat-messages { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; scroll-behavior: smooth; }
-        .message-wrapper { display: flex; width: 100%; justify-content: flex-start; }
+        .header-actions { display: flex; gap: 8px; }
+        .btn-export { background: var(--bg-panel); border: 1px solid var(--border-color); color: var(--text-secondary); padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;}
+        .btn-export:hover { border-color: #3f3f46; color: var(--text-primary); background: var(--bg-hover); }
+        .btn-clear { border-color: rgba(239, 68, 68, 0.3); color: #f87171; }
+        .btn-clear:hover { border-color: #ef4444; color: #fca5a5; background: rgba(239, 68, 68, 0.1); }
+
+        .chat-messages { flex: 1; padding: 32px; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; scroll-behavior: smooth; }
+        
+        .message-wrapper { display: flex; width: 100%; justify-content: flex-start; animation: fadeIn 0.3s ease; }
         .message-wrapper.user { justify-content: flex-end; }
-        .message { max-width: 85%; padding: 16px 20px; border-radius: 12px; font-size: 14.5px; line-height: 1.6; }
-        .message.user { background: var(--bg-panel); border: 1px solid var(--border-color); color: #e4e4e7; border-bottom-right-radius: 4px; }
-        .message.bot { background: transparent; color: #f4f4f5; width: 100%; }
+        
+        .message { max-width: 80%; padding: 16px 20px; border-radius: 14px; font-size: 14px; line-height: 1.6; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .message.user { background: var(--bg-panel); border: 1px solid var(--border-color); color: #f4f4f5; border-bottom-right-radius: 4px; }
+        .message.bot { background: transparent; color: var(--text-primary); width: 100%; padding: 0; border: none; box-shadow: none; }
 
+        /* Welcome Hero Sofisticado */
         .welcome-hero { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; color: var(--text-secondary); animation: fadeIn 0.4s ease; }
-        .welcome-hero h2 { font-size: 24px; color: #fff; margin-bottom: 10px; }
-        .welcome-hero p { font-size: 14px; margin-bottom: 24px; }
-        .quick-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; max-width: 650px; }
-        .quick-btn { background: var(--bg-panel); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px 18px; border-radius: 10px; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; flex: 1; min-width: 250px; justify-content: center;}
-        .quick-btn:hover { border-color: var(--accent-blue); background: rgba(59, 130, 246, 0.05); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59,130,246,0.15); color: #fff;}
+        .welcome-hero h2 { font-size: 26px; color: #fff; margin-bottom: 8px; font-weight: 700; letter-spacing: -0.5px; }
+        .welcome-hero p { font-size: 14px; margin-bottom: 28px; color: var(--text-secondary); }
+        
+        .quick-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; max-width: 700px; }
+        .quick-btn { background: var(--bg-panel); border: 1px solid var(--border-color); color: var(--text-primary); padding: 14px 18px; border-radius: 12px; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 10px; flex: 1; min-width: 220px; justify-content: flex-start; }
+        .quick-btn:hover { border-color: var(--accent-blue); background: rgba(59, 130, 246, 0.08); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(59,130,246,0.12); color: #fff;}
 
-        .typing-indicator { display: flex; gap: 4px; padding: 16px 20px; align-items: center; }
-        .typing-indicator span { width: 6px; height: 6px; background-color: var(--accent-blue); border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
+        /* Typing Indicator elegante */
+        .typing-indicator { display: flex; gap: 5px; padding: 12px 16px; align-items: center; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 12px; width: fit-content; }
+        .typing-indicator span { width: 7px; height: 7px; background-color: var(--accent-blue); border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
         .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
         .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
         @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
         .message.bot p { margin-bottom: 12px; }
         .message.bot p:last-child { margin-bottom: 0; }
-        .code-wrapper { margin: 16px 0; background: #000; border: 1px solid #27272a; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        .code-header { display: flex; justify-content: space-between; align-items: center; background: #121214; padding: 8px 16px; border-bottom: 1px solid #27272a; }
+        
+        /* Bloco de Código Estilo IDE */
+        .code-wrapper { margin: 16px 0; background: #0c0c0e; border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+        .code-header { display: flex; justify-content: space-between; align-items: center; background: #141418; padding: 10px 16px; border-bottom: 1px solid var(--border-color); }
         .mac-dots { display: flex; gap: 6px; }
         .mac-dots span { width: 10px; height: 10px; border-radius: 50%; }
         .mac-dots .red { background: #ff5f56; }
         .mac-dots .yellow { background: #ffbd2e; }
         .mac-dots .green { background: #27c93f; }
-        .code-lang { color: #8b949e; font-size: 12px; font-family: var(--font-ui); text-transform: uppercase; letter-spacing: 0.5px; margin-left: 10px; flex: 1; }
-        .copy-btn { background: #27272a; border: 1px solid #3f3f46; color: #e4e4e7; cursor: pointer; font-size: 11px; padding: 4px 10px; border-radius: 4px; transition: 0.2s; font-weight: 500;}
-        .copy-btn:hover { background: #3f3f46; color: #fff; }
-        .code-wrapper pre { margin: 0; padding: 16px; overflow-x: auto; }
-        .code-wrapper code { font-family: var(--font-code); font-size: 13.5px; color: #e4e4e7; line-height: 1.5; }
+        .code-lang { color: #71717a; font-size: 11px; font-family: var(--font-code); text-transform: uppercase; letter-spacing: 1px; margin-left: 12px; flex: 1; }
+        .copy-btn { background: #22222b; border: 1px solid #3f3f46; color: #e4e4e7; cursor: pointer; font-size: 11px; padding: 5px 12px; border-radius: 6px; transition: 0.2s; font-weight: 500;}
+        .copy-btn:hover { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+        .code-wrapper pre { margin: 0; padding: 18px; overflow-x: auto; }
+        .code-wrapper code { font-family: var(--font-code); font-size: 13px; color: #e4e4e7; line-height: 1.6; }
         
-        .input-area { padding: 20px 30px; background: linear-gradient(to top, var(--bg-main) 70%, transparent); display: flex; flex-direction: column; gap: 10px; }
-        .input-box { flex: 1; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 12px; display: flex; padding: 12px 16px; align-items: flex-end; transition: border 0.2s; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
-        .input-box:focus-within { border-color: var(--accent-blue); box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3); }
+        /* Área de Input Fluida */
+        .input-area { padding: 20px 32px; background: linear-gradient(to top, var(--bg-main) 75%, transparent); display: flex; flex-direction: column; gap: 10px; }
+        .input-box { flex: 1; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 14px; display: flex; padding: 12px 18px; align-items: flex-end; transition: all 0.2s; box-shadow: 0 4px 24px rgba(0,0,0,0.25); }
+        .input-box:focus-within { border-color: var(--border-focus); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2), 0 4px 24px rgba(0,0,0,0.3); }
         textarea { flex: 1; background: transparent; border: none; color: #fff; font-size: 14.5px; resize: none; outline: none; max-height: 200px; line-height: 1.5; padding: 4px 0; }
         
-        .attach-wrapper { position: relative; margin-right: 12px; padding-bottom: 2px;}
+        .attach-wrapper { position: relative; margin-right: 12px; padding-bottom: 4px;}
         .attach-btn { cursor: pointer; color: #71717a; font-size: 20px; transition: color 0.2s; display: flex; align-items: center; justify-content: center;}
         .attach-btn:hover { color: var(--accent-blue); }
-        .send-btn-circle { background: var(--accent-blue); border: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; margin-left: 12px;}
-        .send-btn-circle:hover { background: var(--accent-hover); transform: scale(1.05); }
+        
+        .send-btn-circle { background: var(--accent-blue); border: none; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; margin-left: 12px; box-shadow: 0 2px 10px rgba(59,130,246,0.3);}
+        .send-btn-circle:hover { background: var(--accent-hover); transform: scale(1.06); }
         .send-btn-circle svg { fill: white; width: 16px; height: 16px; margin-left: 2px; }
 
-        #preview-container { display: none; align-items: center; gap: 10px; background: rgba(59, 130, 246, 0.1); padding: 8px 12px; border-radius: 8px; width: fit-content; font-size: 12px; border: 1px solid rgba(59, 130, 246, 0.2); color: #93c5fd; font-weight: 500; margin-bottom: 8px;}
-        #remove-file { color: #f87171; cursor: pointer; font-weight: bold; margin-left: 6px; padding: 2px 6px; border-radius: 4px;}
+        #preview-container { display: none; align-items: center; gap: 10px; background: rgba(59, 130, 246, 0.1); padding: 8px 14px; border-radius: 10px; width: fit-content; font-size: 12px; border: 1px solid rgba(59, 130, 246, 0.25); color: #93c5fd; font-weight: 500; margin-bottom: 4px;}
+        #remove-file { color: #f87171; cursor: pointer; font-weight: bold; margin-left: 8px; padding: 2px 6px; border-radius: 4px;}
         #remove-file:hover { background: rgba(248, 113, 113, 0.2); }
     </style>
 </head>
@@ -109,7 +135,7 @@
 
     <div class="sidebar">
         <div class="sidebar-header">
-            <h1><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="url(#grad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3b82f6" /><stop offset="100%" stop-color="#8b5cf6" /></linearGradient></defs><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> AI Hub Pro</h1>
+            <h1><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="url(#grad)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3b82f6" /><stop offset="100%" stop-color="#8b5cf6" /></linearGradient></defs><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> AI Hub Pro</h1>
         </div>
         <button class="btn-primary" onclick="newChat()">+ Novo Workspace</button>
 
@@ -130,9 +156,9 @@
 
     <div class="chat-container">
         <div class="chat-header">
-            <div>
-                <h3 id="chat-title" style="font-size: 15px; font-weight: 600;">Novo Workspace</h3>
-                <span id="chat-sub" style="font-size: 12px; color: var(--text-secondary);">Sistema Operativo Inteligente</span>
+            <div class="header-info">
+                <h3 id="chat-title">Novo Workspace</h3>
+                <span id="chat-sub">Sistema Operativo • Pronto</span>
             </div>
             <div class="header-actions">
                 <button class="btn-export btn-clear" onclick="clearCurrentChat()">🗑️ Limpar Chat</button>
@@ -180,8 +206,15 @@
         function copyCode(btn, content) {
             navigator.clipboard.writeText(content);
             btn.innerText = "Copiado!";
-            btn.style.color = "#4ade80";
-            setTimeout(() => { btn.innerText = "Copiar"; btn.style.color = "#e4e4e7"; }, 2000);
+            btn.style.background = "#22c55e";
+            btn.style.borderColor = "#22c55e";
+            btn.style.color = "#fff";
+            setTimeout(() => { 
+                btn.innerText = "Copiar"; 
+                btn.style.background = "#22222b"; 
+                btn.style.borderColor = "#3f3f46";
+                btn.style.color = "#e4e4e7"; 
+            }, 2000);
         }
 
         const personas = {
@@ -208,8 +241,8 @@
             ]
         };
 
-        let sessions = JSON.parse(localStorage.getItem('ai_hub_v3_sessions') || '[]');
-        let activeId = localStorage.getItem('ai_hub_v3_active');
+        let sessions = JSON.parse(localStorage.getItem('ai_hub_v4_sessions') || '[]');
+        let activeId = localStorage.getItem('ai_hub_v4_active');
         let fileContent = "";
 
         function init() {
@@ -225,7 +258,6 @@
                 id, 
                 title: 'Novo Workspace', 
                 agent: document.getElementById('agent-select').value || 'Geral',
-                provider: 'google',
                 history: [] 
             });
             loadSession(id);
@@ -343,8 +375,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         history: tempHistory, 
-                        systemInstruction: personas[s.agent],
-                        provider: 'google'
+                        systemInstruction: personas[s.agent]
                     })
                 });
                 
@@ -387,8 +418,8 @@
         }
 
         function save() {
-            localStorage.setItem('ai_hub_v3_sessions', JSON.stringify(sessions));
-            localStorage.setItem('ai_hub_v3_active', activeId);
+            localStorage.setItem('ai_hub_v4_sessions', JSON.stringify(sessions));
+            localStorage.setItem('ai_hub_v4_active', activeId);
             renderList();
         }
 
