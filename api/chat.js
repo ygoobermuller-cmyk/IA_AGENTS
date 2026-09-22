@@ -17,25 +17,35 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Chave API não configurada.' });
     }
 
-    // Utiliza o modelo atualizado gemini-2.0-flash que é o padrão ativo nas novas contas
-    const modelName = "gemini-3.6-flash";
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    // Lista de modelos a tentar por ordem de preferência
+    const modelsToTry = ["gemini-3.6-flash", "gemini-1.5-flash", "gemini-pro"];
+    let data = null;
+    let success = false;
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: history })
-    });
+    for (const modelName of modelsToTry) {
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: history })
+      });
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error(`ERRO DO GOOGLE (Status ${response.status}):`, errorData);
-      return res.status(response.status).json({ error: 'A API do Google falhou.' });
+      if (response.ok) {
+        data = await response.json();
+        success = true;
+        break;
+      } else {
+        const errText = await response.text();
+        console.warn(`Modelo ${modelName} falhou:`, errText);
+      }
     }
 
-    const data = await response.json();
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta.";
+    if (!success || !data) {
+      return res.status(503).json({ error: 'Todos os modelos estão temporariamente sobrecarregados. Tente novamente em instantes.' });
+    }
 
+    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta.";
     return res.status(200).json({ text: responseText });
 
   } catch (error) {
