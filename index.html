@@ -1,394 +1,204 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Agent AI Hub</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        brand: {
-                            50: '#eef2ff',
-                            100: '#e0e7ff',
-                            500: '#6366f1',
-                            600: '#4f46e5',
-                            700: '#4338ca',
-                            900: '#312e81',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-
-    <!-- FontAwesome & Google Fonts -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Marked.js para renderizar Markdown (negrito, código, listas, etc) -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
+    <title>AI Multi-Agent Pro</title>
     <style>
-        body { font-family: 'Inter', sans-serif; }
-
-        .chat-container { height: calc(100vh - 160px); }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb {
-            background-color: rgba(156, 163, 175, 0.5);
-            border-radius: 10px;
-        }
-        .dark ::-webkit-scrollbar-thumb { background-color: rgba(75, 85, 99, 0.5); }
-
-        /* Typing Indicator Animation */
-        .typing-indicator span {
-            display: inline-block;
-            width: 6px; height: 6px;
-            background-color: currentColor;
-            border-radius: 50%;
-            margin: 0 2px;
-            animation: bounce 1.4s infinite ease-in-out both;
-            opacity: 0.7;
-        }
-        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
+        :root {
+            --bg-color: #0f1117;
+            --panel-bg: #161b22;
+            --border-color: #30363d;
+            --text-primary: #c9d1d9;
+            --accent-color: #238636;
+            --accent-blue: #1f6feb;
+            --user-msg: #1f242c;
+            --bot-msg: #161b22;
         }
 
-        /* Markdown Styles for Chat */
-        .prose pre {
-            background-color: #1e293b; color: #f8fafc;
-            padding: 1rem; border-radius: 0.5rem;
-            overflow-x: auto; margin-top: 0.5rem; margin-bottom: 0.5rem;
-            font-size: 0.875rem;
-        }
-        .prose code {
-            background-color: rgba(0,0,0,0.1); padding: 0.2rem 0.4rem;
-            border-radius: 0.25rem; font-family: monospace; font-size: 0.875rem;
-        }
-        .dark .prose code { background-color: rgba(255,255,255,0.1); }
-        .prose p { margin-bottom: 0.5rem; }
-        .prose p:last-child { margin-bottom: 0; }
-        .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.5rem; }
-        .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.5rem; }
-        .prose a { color: #3b82f6; text-decoration: underline; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-primary); height: 100vh; display: flex; overflow: hidden; }
+
+        /* Sidebar */
+        .sidebar { width: 260px; background-color: var(--panel-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px; }
+        .sidebar h2 { font-size: 16px; margin-bottom: 20px; color: #fff; display: flex; align-items: center; gap: 8px; }
+        .agent-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+        .agent-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; transition: background 0.2s; font-size: 14px; }
+        .agent-item:hover, .agent-item.active { background-color: #21262d; color: #58a6ff; font-weight: 500; }
+
+        /* Main Chat Area */
+        .chat-container { flex: 1; display: flex; flex-direction: column; height: 100vh; }
+        .chat-header { padding: 15px 25px; background-color: var(--panel-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .chat-header span { font-weight: 600; color: #fff; }
+
+        .chat-messages { flex: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .message { max-width: 75%; padding: 12px 16px; border-radius: 8px; font-size: 14px; line-height: 1.5; word-break: break-word; }
+        .message.user { background-color: var(--user-msg); align-self: flex-end; border: 1px solid var(--border-color); }
+        .message.bot { background-color: var(--bot-msg); align-self: flex-start; border: 1px solid var(--border-color); }
+
+        /* Input Area */
+        .chat-input-area { padding: 20px 25px; background-color: var(--panel-bg); border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px; }
+        .input-wrapper { display: flex; align-items: center; gap: 10px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px; }
+        .chat-input-area textarea { flex: 1; background: transparent; border: none; color: #fff; font-size: 14px; resize: none; outline: none; max-height: 120px; }
+        
+        .action-btns { display: flex; align-items: center; gap: 10px; }
+        .attach-btn { cursor: pointer; color: #8b949e; font-size: 18px; transition: color 0.2s; }
+        .attach-btn:hover { color: #58a6ff; }
+        .send-btn { background-color: var(--accent-blue); color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .send-btn:hover { background-color: #388bfd; }
+
+        /* Preview anexo */
+        #preview-container { display: none; align-items: center; gap: 10px; background: #21262d; padding: 6px 10px; border-radius: 6px; width: fit-content; font-size: 12px; }
+        #preview-container img { width: 30px; height: 30px; object-fit: cover; border-radius: 4px; }
+        #remove-file { color: #f85149; cursor: pointer; font-weight: bold; }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-300 flex items-center justify-center h-screen w-full">
+<body>
 
-    <div class="w-full max-w-5xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl flex flex-col h-[95vh] sm:h-[90vh] overflow-hidden border border-gray-200 dark:border-gray-700 m-4 transition-colors duration-300">
-        
-        <!-- Header -->
-        <header class="bg-brand-600 dark:bg-brand-900 text-white p-4 flex flex-col sm:flex-row justify-between items-center shadow-md z-10 transition-colors duration-300">
-            <div class="flex items-center gap-3 mb-3 sm:mb-0">
-                <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm shadow-inner">
-                    <i class="fa-solid fa-robot text-xl"></i>
-                </div>
-                <div>
-                    <h1 class="text-xl font-bold leading-tight tracking-wide">AI Multi-Agent</h1>
-                    <p class="text-xs text-brand-200 dark:text-brand-100">Assistentes Especializados</p>
-                </div>
-            </div>
-            
-            <div class="flex items-center gap-3">
-                <!-- Dropdown de Agentes -->
-                <div class="flex items-center gap-2 bg-white/10 hover:bg-white/20 transition-colors rounded-lg p-1.5 px-3 border border-white/20">
-                    <label for="agent-select" class="text-sm font-medium cursor-pointer"><i class="fa-solid fa-users-gear mr-1"></i> Agente:</label>
-                    <select id="agent-select" class="bg-transparent text-white text-sm font-semibold focus:outline-none cursor-pointer [&>option]:text-gray-800 dark:[&>option]:text-white dark:[&>option]:bg-gray-800 outline-none border-none">
-                        <option value="geral">Assistente Geral</option>
-                        <option value="erp_sistemas">Especialista ERP e Sistemas</option>
-                        <option value="hardware">Consultor de Hardware</option>
-                    </select>
-                </div>
+    <div class="sidebar">
+        <h2>🤖 AI Multi-Agent</h2>
+        <ul class="agent-list">
+            <li class="agent-item active" onclick="selectAgent('Assistente Geral')">Assistente Geral</li>
+            <li class="agent-item" onclick="selectAgent('Infraestrutura & Sistemas')">Infraestrutura & Sistemas</li>
+            <li class="agent-item" onclick="selectAgent('Desenvolvimento & Código')">Desenvolvimento & Código</li>
+        </ul>
+    </div>
 
-                <!-- Botão de Dark Mode (Modo Escuro) -->
-                <button id="theme-toggle" class="w-9 h-9 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg border border-white/20 transition-colors" title="Alternar Tema">
-                    <i class="fa-solid fa-moon text-sm"></i>
-                </button>
-            </div>
-        </header>
-
-        <!-- Área de Chat -->
-        <main id="chat-window" class="chat-container overflow-y-auto p-4 sm:p-6 flex-1 bg-slate-50 dark:bg-gray-800 flex flex-col gap-6 transition-colors duration-300">
-            <!-- As mensagens serão injetadas aqui via JavaScript -->
-        </main>
-
-        <!-- Indicador de "Escrevendo..." -->
-        <div id="loading-indicator" class="hidden px-6 pb-4 bg-slate-50 dark:bg-gray-800 transition-colors duration-300">
-            <div class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-2xl rounded-bl-none px-4 py-3 inline-block w-fit">
-                <div class="typing-indicator flex items-center h-5">
-                    <span></span><span></span><span></span>
-                </div>
-            </div>
+    <div class="chat-container">
+        <div class="chat-header">
+            <span id="current-agent-title">Agente: Assistente Geral</span>
         </div>
 
-        <!-- Área de Input (Formulário) -->
-        <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 transition-colors duration-300">
-            <form id="chat-form" class="flex gap-2 relative max-w-4xl mx-auto">
-                <input 
-                    type="text" 
-                    id="user-input" 
-                    placeholder="Digite a sua mensagem para o agente..." 
-                    class="w-full bg-gray-100 dark:bg-gray-700 border border-transparent dark:border-gray-600 text-gray-800 dark:text-white rounded-full pl-5 pr-14 py-3 sm:py-4 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-gray-800 transition-all shadow-inner placeholder-gray-500"
-                    autocomplete="off"
-                >
-                <button 
-                    type="submit" 
-                    id="send-btn"
-                    class="absolute right-2 top-1/2 transform -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-brand-600 hover:bg-brand-700 text-white rounded-full flex items-center justify-center transition-colors shadow-md disabled:bg-gray-400 disabled:dark:bg-gray-600 disabled:cursor-not-allowed"
-                >
-                    <i class="fa-solid fa-paper-plane text-sm sm:text-base -ml-1"></i>
-                </button>
-            </form>
-            <div class="text-center mt-2">
-                <span class="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Powered by Gemini & Vercel Backend</span>
+        <div class="chat-messages" id="chat-messages">
+            <div class="message bot">Olá! Sou o seu assistente. Como posso ajudar hoje? Pode inclusive enviar imagens ou capturas de ecrã para analisar.</div>
+        </div>
+
+        <div class="chat-input-area">
+            <div id="preview-container">
+                <img id="file-preview" src="" alt="preview">
+                <span id="file-name"></span>
+                <span id="remove-file" onclick="clearFile()">✕</span>
             </div>
-        </footer>
+            <div class="input-wrapper">
+                <label for="file-input" class="attach-btn" title="Anexar imagem">📎</label>
+                <input type="file" id="file-input" accept="image/*" style="display: none;" onchange="handleFileSelect(event)" />
+                <textarea id="user-input" rows="1" placeholder="Digite a sua mensagem..." onkeydown="checkEnter(event)"></textarea>
+                <button class="send-btn" onclick="sendMessage()">Enviar</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        // Array/Objeto de configuração dos 3 agentes solicitados
-        const agentsConfig = {
-            "geral": {
-                name: "Assistente Geral",
-                icon: "fa-regular fa-comments",
-                bgColor: "bg-blue-500",
-                welcomeMessage: "Olá! Sou o Assistente Geral. Como posso te ajudar hoje?",
-                systemPrompt: "Você é um assistente geral útil, educado e direto ao ponto."
-            },
-            "erp_sistemas": {
-                name: "Especialista ERP e Sistemas",
-                icon: "fa-solid fa-network-wired",
-                bgColor: "bg-emerald-600",
-                welcomeMessage: "Saudações. Sou o Especialista em ERP e Sistemas. Precisa de ajuda com arquiteturas, SOQL, Salesforce ou banco de dados hoje?",
-                systemPrompt: "Você é um assistente técnico sênior. A sua função é ajudar um SAP Technology Consultant a otimizar fluxos de trabalho, estruturar queries SOQL para Salesforce e resolver problemas em integrações e banco de dados do Senior Sistemas."
-            },
-            "hardware": {
-                name: "Consultor de Hardware",
-                icon: "fa-solid fa-microchip",
-                bgColor: "bg-purple-600",
-                welcomeMessage: "E aí! Pronto para extrair o máximo de FPS? Fale sobre o seu hardware.",
-                systemPrompt: "Você é um especialista em hardware de alta performance. Ajude a analisar compatibilidade, fontes e diagnósticos para setups com processadores AMD Ryzen e placas de vídeo RTX, focando em otimizar FPS para Call of Duty Warzone e Modern Warfare 4."
-            }
-        };
+        let currentAgent = "Assistente Geral";
+        let chatHistory = [];
+        let attachedFile = null;
 
-        // Estado inicial da aplicação
-        let currentAgentId = 'geral';
-        const chatHistories = { "geral": [], "erp_sistemas": [], "hardware": [] };
-        let isWaitingForResponse = false;
-
-        // Elementos DOM
-        const chatWindow = document.getElementById('chat-window');
-        const chatForm = document.getElementById('chat-form');
-        const userInput = document.getElementById('user-input');
-        const sendBtn = document.getElementById('send-btn');
-        const agentSelect = document.getElementById('agent-select');
-        const loadingIndicator = document.getElementById('loading-indicator');
-        const themeToggle = document.getElementById('theme-toggle');
-        const htmlElement = document.documentElement;
-        
-        function scrollToBottom() {
-            chatWindow.scrollTop = chatWindow.scrollHeight;
+        function selectAgent(agentName) {
+            currentAgent = agentName;
+            document.getElementById('current-agent-title').innerText = `Agente: ${agentName}`;
         }
 
-        function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, tag => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-            }[tag] || tag));
-        }
-
-        function setLoading(isLoading) {
-            isWaitingForResponse = isLoading;
-            userInput.disabled = isLoading;
-            sendBtn.disabled = isLoading;
-            if (isLoading) {
-                loadingIndicator.classList.remove('hidden');
-                scrollToBottom();
-            } else {
-                loadingIndicator.classList.add('hidden');
-                userInput.focus();
-            }
-        }
-
-        function renderMessage(text, sender, agentId = null) {
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('flex', 'w-full', 'animate-[fadeIn_0.3s_ease-out_forwards]');
-            
-            if (sender === 'user') {
-                messageDiv.classList.add('justify-end');
-                messageDiv.innerHTML = `
-                    <div class="max-w-[85%] sm:max-w-[75%] bg-brand-600 text-white rounded-2xl rounded-br-sm px-5 py-3.5 shadow-md">
-                        <p class="text-[15px] leading-relaxed whitespace-pre-wrap">${escapeHTML(text)}</p>
-                    </div>
-                `;
-            } else {
-                const agent = agentsConfig[agentId] || agentsConfig['geral'];
-                // Transforma Markdown em HTML via marked.js
-                const parsedContent = marked.parse(text);
-
-                messageDiv.classList.add('justify-start');
-                messageDiv.innerHTML = `
-                    <div class="flex items-end gap-3 max-w-[95%] sm:max-w-[85%]">
-                        <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white text-sm ${agent.bgColor} shadow-md mb-1">
-                            <i class="${agent.icon}"></i>
-                        </div>
-                        <div class="bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-800 dark:text-gray-100 rounded-2xl rounded-bl-sm px-5 py-3.5 shadow-md overflow-x-auto">
-                            <div class="text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 tracking-wide uppercase">${agent.name}</div>
-                            <div class="text-[15px] leading-relaxed prose dark:prose-invert max-w-none message-content">${parsedContent}</div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            chatWindow.appendChild(messageDiv);
-            scrollToBottom();
-        }
-
-        function initAgentHistory(agentId) {
-            const agent = agentsConfig[agentId];
-            // Injeciona o System Prompt como uma mensagem de contexto inicial de forma invisível para a API,
-            // garantindo que o Back-end só precisa repassar o 'history'
-            chatHistories[agentId] = [
-                { role: "user", parts: [{ text: `INSTRUÇÃO DE SISTEMA (Siga estritamente): ${agent.systemPrompt}` }] },
-                { role: "model", parts: [{ text: "Entendido. Atuarei exatamente conforme instruído." }] }
-            ];
-        }
-
-        function loadAgentChat() {
-            chatWindow.innerHTML = '';
-            
-            if (chatHistories[currentAgentId].length === 0) {
-                initAgentHistory(currentAgentId);
-            }
-
-            const history = chatHistories[currentAgentId];
-            const agent = agentsConfig[currentAgentId];
-
-            renderMessage(agent.welcomeMessage, 'model', currentAgentId);
-
-            // Renderiza apenas as mensagens que não são do System Prompt injetado (ignora os 2 primeiros itens)
-            for (let i = 2; i < history.length; i++) {
-                const msg = history[i];
-                if (msg.role === 'user') {
-                    renderMessage(msg.parts[0].text, 'user');
-                } else {
-                    renderMessage(msg.parts[0].text, 'model', currentAgentId);
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                attachedFile = file;
+                document.getElementById('file-name').innerText = file.name;
+                if (file.type.startsWith('image/')) {
+                    document.getElementById('file-preview').src = URL.createObjectURL(file);
                 }
+                document.getElementById('preview-container').style.display = 'flex';
             }
         }
 
-        async function fetchAIResponse(userText) {
-            // Adiciona a mensagem do usuário ao histórico local primeiro
-            chatHistories[currentAgentId].push({ role: "user", parts: [{ text: userText }] });
+        function clearFile() {
+            attachedFile = null;
+            document.getElementById('file-input').value = '';
+            document.getElementById('preview-container').style.display = 'none';
+        }
+
+        function checkEnter(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        async function toBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const text = input.value.trim();
+            if (!text && !attachedFile) return;
+
+            let parts = [];
+            if (text) parts.push({ text: `[Contexto - Agente Ativo: ${currentAgent}] ${text}` });
+
+            if (attachedFile) {
+                const base64Data = await toBase64(attachedFile);
+                parts.push({
+                    inlineData: {
+                        mimeType: attachedFile.type,
+                        data: base64Data
+                    }
+                });
+            }
+
+            // Adiciona mensagem do utilizador visualmente
+            appendMessage(text || "[Ficheiro Anexado]", 'user');
+            chatHistory.push({ role: 'user', parts: parts });
+
+            input.value = '';
+            const sentFile = attachedFile;
+            clearFile();
+
+            // Mostra indicador de loading
+            const loadingId = appendMessage('A pensar...', 'bot loading');
 
             try {
-                // Envia requisição POST para a rota do back-end
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        history: chatHistories[currentAgentId]
-                    })
+                    body: JSON.stringify({ history: chatHistory })
                 });
 
-                const result = await response.json();
+                const data = await response.json();
+                removeMessage(loadingId);
 
-                if (!response.ok) {
-                    throw new Error(result.error || `Erro de comunicação: ${response.status}`);
-                }
-
-                if (result.text) {
-                    const aiText = result.text;
-                    // Salva a resposta do modelo no histórico e renderiza
-                    chatHistories[currentAgentId].push({ role: "model", parts: [{ text: aiText }] });
-                    renderMessage(aiText, 'model', currentAgentId);
+                if (response.ok) {
+                    appendMessage(data.text, 'bot');
+                    chatHistory.push({ role: 'model', parts: [{ text: data.text }] });
                 } else {
-                    renderMessage("⚠️ Ocorreu um problema ao processar a resposta.", 'model', currentAgentId);
+                    appendMessage(`Erro: ${data.error || 'Falha na comunicação.'}`, 'bot');
                 }
-
-            } catch (error) {
-                console.error("Erro no Fetch:", error);
-                const errorMsg = `**Erro de conexão:** Não foi possível comunicar com o servidor. \n\n*Detalhe técnico: ${error.message}*\n\nSe estiver no GitHub Pages, certifique-se de que fez o deploy do projeto na Vercel para suportar rotas de API.`;
-                renderMessage(errorMsg, 'model', currentAgentId);
-                
-                // Remove a mensagem do histórico em caso de erro para não poluir chamadas futuras
-                chatHistories[currentAgentId].pop();
-            } finally {
-                setLoading(false);
+            } catch (err) {
+                removeMessage(loadingId);
+                appendMessage('Erro de conexão com o servidor.', 'bot');
             }
         }
 
-        chatForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (isWaitingForResponse) return;
-
-            const text = userInput.value.trim();
-            if (!text) return;
-
-            userInput.value = '';
-            renderMessage(text, 'user');
-            setLoading(true);
-            await fetchAIResponse(text);
-        });
-
-        agentSelect.addEventListener('change', (e) => {
-            currentAgentId = e.target.value;
-            loadAgentChat();
-        });
-
-        // Lógica de Alternância do Tema (Dark Mode)
-        function toggleTheme() {
-            if (htmlElement.classList.contains('dark')) {
-                htmlElement.classList.remove('dark');
-                localStorage.setItem('theme', 'light');
-                themeToggle.innerHTML = '<i class="fa-solid fa-moon text-sm"></i>';
-            } else {
-                htmlElement.classList.add('dark');
-                localStorage.setItem('theme', 'dark');
-                themeToggle.innerHTML = '<i class="fa-solid fa-sun text-sm"></i>';
-            }
+        function appendMessage(text, sender) {
+            const messagesDiv = document.getElementById('chat-messages');
+            const msgDiv = document.createElement('div');
+            const msgId = 'msg-' + Date.now();
+            msgDiv.id = msgId;
+            msgDiv.className = `message ${sender}`;
+            msgDiv.innerText = text;
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            return msgId;
         }
 
-        themeToggle.addEventListener('click', toggleTheme);
-
-        // Inicialização
-        window.onload = () => {
-            // Verificar tema guardado
-            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                htmlElement.classList.add('dark');
-                themeToggle.innerHTML = '<i class="fa-solid fa-sun text-sm"></i>';
-            }
-            
-            // Configurar o marked.js
-            marked.setOptions({ breaks: true });
-
-            // Iniciar o primeiro chat
-            loadAgentChat();
-        };
-
-        // Adiciona um estilo global para a animação de fade-in
-        const style = document.createElement('style');
-        style.innerHTML = `
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(8px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
-        `;
-        document.head.appendChild(style);
-
+        function removeMessage(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
     </script>
 </body>
 </html>
