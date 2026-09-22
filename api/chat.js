@@ -17,10 +17,8 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Chave API não configurada.' });
     }
 
-    // Cadeia de fallback hierárquica garantindo robustez máxima
     const modelsToTry = ["gemini-3.6-flash", "gemini-1.5-flash", "gemini-pro"];
-    let data = null;
-    let success = false;
+    let lastErrorDetail = "";
 
     for (const modelName of modelsToTry) {
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
@@ -32,24 +30,21 @@ export default async function handler(req, res) {
       });
 
       if (response.ok) {
-        data = await response.json();
-        success = true;
-        break;
+        const data = await response.json();
+        const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta gerada.";
+        return res.status(200).json({ text: responseText });
       } else {
         const errText = await response.text();
-        console.warn(`Modelo ${modelName} indisponível, a tentar próximo... Resposta:`, errText);
+        lastErrorDetail = errText;
+        console.warn(`Modelo ${modelName} falhou:`, errText);
       }
     }
 
-    if (!success || !data) {
-      return res.status(503).json({ error: 'Todos os modelos estão com alta procura neste momento. Tente novamente em instantes.' });
-    }
-
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta gerada.";
-    return res.status(200).json({ text: responseText });
+    // Se todos falharem, devolve o detalhe real do erro para sabermos o motivo
+    return res.status(500).json({ error: `Erro da API: ${lastErrorDetail.substring(0, 150)}` });
 
   } catch (error) {
-    console.error("Erro interno crítico no servidor:", error);
-    return res.status(500).json({ error: 'Falha interna no processamento.' });
+    console.error("Erro interno crítico:", error);
+    return res.status(500).json({ error: 'Falha interna no servidor da Vercel (possível excesso de tamanho de ficheiro).' });
   }
 }
