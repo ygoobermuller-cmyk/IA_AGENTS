@@ -30,8 +30,8 @@ module.exports = async function handler(req, res) {
     const payload = { contents: googleContents };
     if (systemInstruction) payload.systemInstruction = { parts: [{ text: systemInstruction }] };
 
-    // Usando a rota oficial v1 com o modelo padrão atualizado
-    const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`;
+    // Utilizando o modelo oficial atualizado gemini-3.5-flash
+    const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-3.5-flash:generateContent?key=${geminiKey}`;
 
     const response = await fetch(apiUrl, {
         method: 'POST',
