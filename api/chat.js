@@ -30,12 +30,12 @@ module.exports = async function handler(req, res) {
     const payload = { contents: googleContents };
     if (systemInstruction) payload.systemInstruction = { parts: [{ text: systemInstruction }] };
 
-    // Cascata de modelos: se um estiver ocupado, salta imediatamente para o próximo
-    const fallbackModels = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.5-flash-8b'];
+    // Apenas os dois pilares oficiais e estáveis da Google. Sem nomes inventados.
+    const stableModels = ['gemini-1.5-flash', 'gemini-1.5-pro'];
     let lastErrorMsg = "";
     let finalStatus = 500;
 
-    for (const model of fallbackModels) {
+    for (const model of stableModels) {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -55,14 +55,12 @@ module.exports = async function handler(req, res) {
             lastErrorMsg = responseText; 
         }
 
-        // Interrompe o ciclo apenas se o erro for do nosso lado (formato incorreto) ou chave revogada
         if (finalStatus === 400 || finalStatus === 403) {
             return res.status(finalStatus).json({ error: `Erro Google: ${lastErrorMsg}` });
         }
-        // Se o erro for 503 (High Demand), o ciclo continua silenciosamente para o próximo modelo
     }
 
-    return res.status(finalStatus).json({ error: `Servidores da Google temporariamente ocupados. Detalhe: ${lastErrorMsg}` });
+    return res.status(finalStatus).json({ error: `Servidores da Google ocupados. Detalhe: ${lastErrorMsg}` });
 
   } catch (error) {
     console.error("Vercel Crash:", error);
