@@ -3,89 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Multi-Agent Enterprise Pro</title>
-    <!-- Marked.js para renderização de Markdown e formatação de código -->
+    <title>AI Multi-Agent Enterprise Workspace</title>
+    <!-- Marked.js para renderização de Markdown e código -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         :root {
-            --bg-color: #0b0f19;
-            --panel-bg: #111827;
-            --border-color: #1f2937;
-            --text-primary: #f3f4f6;
-            --text-secondary: #9ca3af;
-            --accent-blue: #3b82f6;
-            --accent-hover: #2563eb;
-            --user-msg: #1e293b;
-            --bot-msg: #111827;
+            --bg-main: #07090e;
+            --bg-sidebar: #0d1117;
+            --bg-panel: #161b22;
+            --border-color: #21262d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent-blue: #2f81f7;
+            --accent-hover: #388bfd;
+            --user-bubble: #1f6feb22;
+            --bot-bubble: #161b22;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-primary); height: 100vh; display: flex; overflow: hidden; }
+        body { background-color: var(--bg-main); color: var(--text-primary); height: 100vh; display: flex; overflow: hidden; }
 
-        /* Sidebar */
-        .sidebar { width: 280px; background-color: var(--panel-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 24px 16px; }
-        .sidebar h2 { font-size: 15px; font-weight: 600; margin-bottom: 24px; color: #fff; display: flex; align-items: center; gap: 10px; letter-spacing: 0.5px; }
-        .agent-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
-        .agent-item { padding: 12px 14px; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; font-size: 14px; color: var(--text-secondary); display: flex; align-items: center; gap: 10px; }
-        .agent-item:hover { background-color: #1f2937; color: var(--text-primary); }
-        .agent-item.active { background-color: #1e3a8a; color: #93c5fd; font-weight: 500; border: 1px solid #3b82f6; }
+        /* Sidebar Avançada */
+        .sidebar { width: 300px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 16px; gap: 16px; }
+        .sidebar-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); }
+        .sidebar-header h1 { font-size: 15px; font-weight: 600; color: #fff; display: flex; align-items: center; gap: 8px; }
+
+        /* Botão Novo Chat */
+        .new-chat-btn { background: var(--accent-blue); color: white; border: none; border-radius: 8px; padding: 10px 14px; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; }
+        .new-chat-btn:hover { background: var(--accent-hover); }
+
+        /* Seletor de Agente */
+        .agent-selector-container { display: flex; flex-direction: column; gap: 6px; }
+        .agent-selector-container label { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+        .agent-select { background: var(--bg-panel); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; font-size: 13px; outline: none; cursor: pointer; }
+        .agent-select:focus { border-color: var(--accent-blue); }
+
+        /* Lista de Chats Anteriores */
+        .history-section { flex: 1; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; margin-top: 8px; }
+        .history-section h3 { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .chat-history-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; justify-content: space-between; transition: all 0.2s; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+        .chat-history-item:hover { background-color: rgba(255,255,255,0.03); color: var(--text-primary); }
+        .chat-history-item.active { background-color: #1f6feb33; color: #58a6ff; font-weight: 500; border: 1px solid #1f6feb66; }
+        .delete-chat { opacity: 0; color: #f85149; font-size: 12px; padding: 2px 6px; border-radius: 4px; }
+        .chat-history-item:hover .delete-chat { opacity: 1; }
+        .delete-chat:hover { background: rgba(248,81,73,0.2); }
 
         /* Main Chat Area */
-        .chat-container { flex: 1; display: flex; flex-direction: column; height: 100vh; background-color: var(--bg-color); }
-        .chat-header { padding: 18px 30px; background-color: var(--panel-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-        .chat-header span { font-weight: 600; font-size: 15px; color: #fff; }
+        .chat-container { flex: 1; display: flex; flex-direction: column; height: 100vh; background-color: var(--bg-main); }
+        .chat-header { padding: 16px 24px; background-color: var(--bg-sidebar); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .chat-header-info { display: flex; flex-direction: column; gap: 2px; }
+        .chat-header-title { font-weight: 600; font-size: 14px; color: #fff; }
+        .chat-header-subtitle { font-size: 12px; color: var(--text-secondary); }
 
-        .chat-messages { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; scroll-behavior: smooth; }
-        .message { max-width: 80%; padding: 14px 18px; border-radius: 12px; font-size: 14px; line-height: 1.6; word-break: break-word; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .message.user { background-color: var(--user-msg); align-self: flex-end; border: 1px solid #334155; }
-        .message.bot { background-color: var(--bot-msg); align-self: flex-start; border: 1px solid var(--border-color); }
+        .chat-messages { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; scroll-behavior: smooth; }
+        .message { max-width: 75%; padding: 14px 18px; border-radius: 12px; font-size: 14px; line-height: 1.6; word-break: break-word; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .message.user { background-color: #1f242c; align-self: flex-end; border: 1px solid var(--border-color); }
+        .message.bot { background-color: var(--bg-panel); align-self: flex-start; border: 1px solid var(--border-color); }
         
-        /* Estilos Markdown nas respostas da IA */
+        /* Estilização Markdown */
         .message.bot p { margin-bottom: 10px; }
         .message.bot p:last-child { margin-bottom: 0; }
-        .message.bot pre { background: #030712; padding: 12px; border-radius: 6px; margin: 10px 0; overflow-x: auto; border: 1px solid #1f2937; }
-        .message.bot code { font-family: monospace; font-size: 13px; color: #60a5fa; background: rgba(31, 41, 55, 0.5); padding: 2px 4px; border-radius: 4px; }
-        .message.bot pre code { background: transparent; padding: 0; color: #e5e7eb; }
+        .message.bot pre { background: #030712; padding: 12px; border-radius: 6px; margin: 10px 0; overflow-x: auto; border: 1px solid var(--border-color); }
+        .message.bot code { font-family: monospace; font-size: 13px; color: #79c0ff; background: rgba(110,118,129,0.2); padding: 2px 4px; border-radius: 4px; }
+        .message.bot pre code { background: transparent; padding: 0; color: #e6edf3; }
         .message.bot ul, .message.bot ol { margin-left: 20px; margin-bottom: 10px; }
 
         /* Input Area */
-        .chat-input-area { padding: 20px 30px; background-color: var(--panel-bg); border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 12px; }
+        .chat-input-area { padding: 20px 24px; background-color: var(--bg-sidebar); border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px; }
         
-        #preview-container { display: none; align-items: center; gap: 12px; background: #1f2937; padding: 8px 12px; border-radius: 8px; width: fit-content; font-size: 13px; border: 1px solid #374151; }
-        #preview-container img { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; }
-        #remove-file { color: #ef4444; cursor: pointer; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
-        #remove-file:hover { background: rgba(239, 68, 68, 0.2); }
+        #preview-container { display: none; align-items: center; gap: 10px; background: var(--bg-panel); padding: 6px 10px; border-radius: 6px; width: fit-content; font-size: 12px; border: 1px solid var(--border-color); }
+        #preview-container img { width: 30px; height: 30px; object-fit: cover; border-radius: 4px; }
+        #remove-file { color: #f85149; cursor: pointer; font-weight: bold; }
 
-        .input-wrapper { display: flex; align-items: center; gap: 12px; background-color: #030712; border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 16px; }
-        .input-wrapper:focus-within { border-color: var(--accent-blue); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+        .input-wrapper { display: flex; align-items: center; gap: 12px; background-color: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 14px; }
+        .input-wrapper:focus-within { border-color: var(--accent-blue); box-shadow: 0 0 0 2px rgba(47, 129, 247, 0.2); }
         
         .chat-input-area textarea { flex: 1; background: transparent; border: none; color: #fff; font-size: 14px; resize: none; outline: none; max-height: 120px; line-height: 1.5; }
         
-        .attach-btn { cursor: pointer; color: var(--text-secondary); font-size: 20px; transition: color 0.2s; display: flex; align-items: center; }
+        .attach-btn { cursor: pointer; color: var(--text-secondary); font-size: 18px; display: flex; align-items: center; transition: color 0.2s; }
         .attach-btn:hover { color: var(--accent-blue); }
         
-        .send-btn { background-color: var(--accent-blue); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-weight: 600; font-size: 14px; cursor: pointer; transition: background 0.2s; }
+        .send-btn { background-color: var(--accent-blue); color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-weight: 600; font-size: 13px; cursor: pointer; transition: background 0.2s; }
         .send-btn:hover { background-color: var(--accent-hover); }
     </style>
 </head>
 <body>
 
+    <!-- Sidebar com Histórico e Agentes -->
     <div class="sidebar">
-        <h2>⚡ AI Multi-Agent Pro</h2>
-        <ul class="agent-list">
-            <li class="agent-item active" onclick="switchAgent('Assistente Geral', this)">🛡️ Assistente Geral</li>
-            <li class="agent-item" onclick="switchAgent('Infraestrutura & Sistemas', this)">⚙️ Infraestrutura & Sistemas</li>
-            <li class="agent-item" onclick="switchAgent('Desenvolvimento & Código', this)">💻 Desenvolvimento & Código</li>
-        </ul>
+        <div class="sidebar-header">
+            <h1>⚡ AI Workspace Pro</h1>
+        </div>
+
+        <button class="new-chat-btn" onclick="createNewChat()">＋ Novo Chat</button>
+
+        <div class="agent-selector-container">
+            <label for="agent-select">Especialidade do Agente</label>
+            <select id="agent-select" class="agent-select" onchange="updateActiveAgent()">
+                <option value="Assistente Geral">🛡️ Assistente Geral</option>
+                <option value="Infraestrutura & Sistemas">⚙️ Infraestrutura & Sistemas (SAP/Salesforce)</option>
+                <option value="Desenvolvimento & Código">💻 Desenvolvimento & Código (JS/APIs)</option>
+            </select>
+        </div>
+
+        <div class="history-section">
+            <h3>Conversas Anteriores</h3>
+            <div id="history-list" style="display: flex; flex-direction: column; gap: 4px;">
+                <!-- Lista injetada via JS -->
+            </div>
+        </div>
     </div>
 
+    <!-- Área Principal de Chat -->
     <div class="chat-container">
         <div class="chat-header">
-            <span id="current-agent-title">Agente Ativo: Assistente Geral</span>
+            <div class="chat-header-info">
+                <span class="chat-header-title" id="chat-title-display">Novo Chat</span>
+                <span class="chat-header-subtitle" id="chat-subtitle-display">Assistente Geral</span>
+            </div>
         </div>
 
         <div class="chat-messages" id="chat-messages">
-            <!-- As mensagens serão carregadas aqui -->
+            <!-- Mensagens -->
         </div>
 
         <div class="chat-input-area">
@@ -95,8 +134,8 @@
                 <span id="remove-file" onclick="clearFile()" title="Remover anexo">✕</span>
             </div>
             <div class="input-wrapper">
-                <label for="file-input" class="attach-btn" title="Anexar imagem, documento de texto ou log">📎</label>
-                <input type="file" id="file-input" accept="image/*,.txt,.csv,.json,.js,.log,.md" style="display: none;" onchange="handleFileSelect(event)" />
+                <label for="file-input" class="attach-btn" title="Anexar imagem ou ficheiro de texto/log">📎</label>
+                <input type="file" id="file-input" accept="image/*,.txt,.csv,.json,.js,.log,.md,.sql" style="display: none;" onchange="handleFileSelect(event)" />
                 <textarea id="user-input" rows="1" placeholder="Escreva a sua mensagem ou cole código/logs..." onkeydown="checkEnter(event)"></textarea>
                 <button class="send-btn" onclick="sendMessage()">Enviar</button>
             </div>
@@ -104,30 +143,106 @@
     </div>
 
     <script>
-        // System Instructions (Personas reais integradas no back-end)
         const agentInstructions = {
             "Assistente Geral": "Você é um assistente geral altamente competente, polido e versátil, focado em ajudar o utilizador em tarefas do dia a dia, organização e resolução geral de problemas.",
-            "Infraestrutura & Sistemas": "Você é um engenheiro sênior de infraestrutura e sistemas corporativos, especialista em SAP S/4HANA, Salesforce, Senior Sistemas (Senior HCM), redes, servidores, gestão de ambientes de TI e diagnóstico de falhas de hardware/software.",
-            "Desenvolvimento & Código": "Você é um programador e analista de sistemas sênior, especialista em JavaScript, Node.js, Vercel, integrações de APIs, Model Context Protocol (MCP), Power Automate e depuração de código complexo."
+            "Infraestrutura & Sistemas": "Você é um engenheiro sênior de infraestrutura e sistemas corporativos, especialista em SAP S/4HANA, Salesforce, Senior Sistemas (Senior HCM), redes, servidores e diagnóstico de falhas.",
+            "Desenvolvimento & Código": "Você é um programador e analista de sistemas sênior, especialista em JavaScript, Node.js, Vercel, integrações de APIs, Model Context Protocol (MCP) e depuração."
         };
 
-        let currentAgent = "Assistente Geral";
-        let chatHistories = JSON.parse(localStorage.getItem('chat_histories') || '{}');
-        let attachedFileContent = null; // Para texto/logs
-        let attachedImageBase64 = null; // Para imagens
+        let sessions = JSON.parse(localStorage.getItem('ai_chat_sessions') || '[]');
+        let activeSessionId = localStorage.getItem('ai_active_session_id') || null;
 
-        function loadCurrentHistory() {
+        let attachedFileContent = null;
+        let attachedImageBase64 = null;
+
+        function initApp() {
+            if (sessions.length === 0) {
+                createNewChat();
+            } else {
+                if (!activeSessionId || !sessions.find(s => s.id === activeSessionId)) {
+                    activeSessionId = sessions[0].id;
+                }
+                loadSession(activeSessionId);
+            }
+            renderHistoryList();
+        }
+
+        function createNewChat() {
+            const newSession = {
+                id: 'session_' + Date.now(),
+                title: 'Novo Chat',
+                agent: document.getElementById('agent-select').value,
+                history: []
+            };
+            sessions.unshift(newSession);
+            activeSessionId = newSession.id;
+            saveAndRefresh();
+        }
+
+        function getActiveSession() {
+            return sessions.find(s => s.id === activeSessionId) || sessions[0];
+        }
+
+        function loadSession(id) {
+            activeSessionId = id;
+            localStorage.setItem('ai_active_session_id', id);
+            const session = getActiveSession();
+            
+            document.getElementById('agent-select').value = session.agent;
+            document.getElementById('chat-title-display').innerText = session.title;
+            document.getElementById('chat-subtitle-display').innerText = `Agente: ${session.agent}`;
+
+            renderMessages();
+            renderHistoryList();
+        }
+
+        function updateActiveAgent() {
+            const session = getActiveSession();
+            if (session) {
+                session.agent = document.getElementById('agent-select').value;
+                document.getElementById('chat-subtitle-display').innerText = `Agente: ${session.agent}`;
+                saveAndRefresh();
+            }
+        }
+
+        function deleteChat(id, event) {
+            event.stopPropagation();
+            sessions = sessions.filter(s => s.id !== id);
+            if (sessions.length === 0) {
+                createNewChat();
+            } else if (activeSessionId === id) {
+                activeSessionId = sessions[0].id;
+                loadSession(activeSessionId);
+            } else {
+                saveAndRefresh();
+            }
+        }
+
+        function renderHistoryList() {
+            const listDiv = document.getElementById('history-list');
+            listDiv.innerHTML = '';
+            sessions.forEach(s => {
+                const item = document.createElement('div');
+                item.className = `chat-history-item ${s.id === activeSessionId ? 'active' : ''}`;
+                item.innerHTML = `
+                    <span>💬 ${s.title}</span>
+                    <span class="delete-chat" onclick="deleteChat('${s.id}', event)" title="Apagar chat">🗑️</span>
+                `;
+                item.onclick = () => loadSession(s.id);
+                listDiv.appendChild(item);
+            });
+        }
+
+        function renderMessages() {
             const messagesDiv = document.getElementById('chat-messages');
             messagesDiv.innerHTML = '';
-            
-            const history = chatHistories[currentAgent] || [];
-            if (history.length === 0) {
-                const welcomeText = `Olá! Estou configurado como **${currentAgent}**. Como posso ajudar hoje?`;
-                appendMessage(welcomeText, 'bot', false);
+            const session = getActiveSession();
+
+            if (session.history.length === 0) {
+                appendMessage(`Olá! Estou pronto. Como posso ajudar na especialidade de **${session.agent}**?`, 'bot', false);
             } else {
-                history.forEach(item => {
+                session.history.forEach(item => {
                     const sender = item.role === 'user' ? 'user' : 'bot';
-                    // Extrai o texto das parts
                     let text = "";
                     if (item.parts) {
                         item.parts.forEach(p => { if (p.text) text += p.text; });
@@ -137,22 +252,12 @@
             }
         }
 
-        function switchAgent(agentName, element) {
-            currentAgent = agentName;
-            document.getElementById('current-agent-title').innerText = `Agente Ativo: ${agentName}`;
-            document.querySelectorAll('.agent-item').forEach(el => el.classList.remove('active'));
-            element.classList.add('active');
-            loadCurrentHistory();
-        }
-
         function handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            document.getElementById('file-name').innerText = file.name;
-            const previewImg = document.getElementById('file-preview');
-
             if (file.type.startsWith('image/')) {
+                const previewImg = document.getElementById('file-preview');
                 previewImg.style.display = 'block';
                 previewImg.src = URL.createObjectURL(file);
                 const reader = new FileReader();
@@ -164,8 +269,10 @@
                     attachedFileContent = null;
                 };
                 reader.readAsDataURL(file);
-            } else {
-                // Ficheiro de texto, log, script, csv
+                document.getElementById('file-name').innerText = file.name;
+                document.getElementById('preview-container').style.display = 'flex';
+            } else if (file.name.match(/\.(txt|csv|json|js|log|md|sql)$/i) || file.type.startsWith('text/')) {
+                const previewImg = document.getElementById('file-preview');
                 previewImg.style.display = 'none';
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -173,8 +280,12 @@
                     attachedImageBase64 = null;
                 };
                 reader.readAsText(file);
+                document.getElementById('file-name').innerText = file.name;
+                document.getElementById('preview-container').style.display = 'flex';
+            } else {
+                alert("Formato não suportado para leitura direta. Envie imagens ou ficheiros de texto/código (.txt, .log, .csv, .js).");
+                clearFile();
             }
-            document.getElementById('preview-container').style.display = 'flex';
         }
 
         function clearFile() {
@@ -205,24 +316,30 @@
                 parts.push({ inlineData: attachedImageBase64 });
             }
 
-            appendMessage(text, 'user', false);
+            const session = getActiveSession();
+            
+            // Define o título do chat com base na primeira mensagem se ainda for "Novo Chat"
+            if (session.title === 'Novo Chat') {
+                session.title = text.length > 28 ? text.substring(0, 28) + '...' : text;
+                document.getElementById('chat-title-display').innerText = session.title;
+            }
 
-            if (!chatHistories[currentAgent]) chatHistories[currentAgent] = [];
-            chatHistories[currentAgent].push({ role: 'user', parts: parts });
-            saveHistories();
+            appendMessage(text, 'user', false);
+            session.history.push({ role: 'user', parts: parts });
+            saveAndRefresh();
 
             input.value = '';
             clearFile();
 
-            const loadingId = appendMessage('A processar resposta...', 'bot loading', false);
+            const loadingId = appendMessage('A processar com modelos de elite...', 'bot loading', false);
 
             try {
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        history: chatHistories[currentAgent],
-                        systemInstruction: agentInstructions[currentAgent]
+                        history: session.history,
+                        systemInstruction: agentInstructions[session.agent]
                     })
                 });
 
@@ -231,8 +348,8 @@
 
                 if (response.ok) {
                     appendMessage(data.text, 'bot', true);
-                    chatHistories[currentAgent].push({ role: 'model', parts: [{ text: data.text }] });
-                    saveHistories();
+                    session.history.push({ role: 'model', parts: [{ text: data.text }] });
+                    saveAndRefresh();
                 } else {
                     appendMessage(`⚠️ Erro: ${data.error || 'Falha na resposta.'}`, 'bot', false);
                 }
@@ -265,13 +382,14 @@
             if (el) el.remove();
         }
 
-        function saveHistories() {
-            localStorage.setItem('chat_histories', JSON.stringify(chatHistories));
+        function saveAndRefresh() {
+            localStorage.setItem('ai_chat_sessions', JSON.stringify(sessions));
+            localStorage.setItem('ai_active_session_id', activeSessionId);
+            renderHistoryList();
         }
 
-        // Inicializa ao carregar a página
         window.onload = () => {
-            loadCurrentHistory();
+            initApp();
         };
     </script>
 </body>
