@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     }
 
     // Utiliza o modelo atualizado gemini-2.0-flash que é o padrão ativo nas novas contas
-    const modelName = "gemini-2.0-flash";
+    const modelName = "gemini-3.6-flash";
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
     const response = await fetch(apiUrl, {
