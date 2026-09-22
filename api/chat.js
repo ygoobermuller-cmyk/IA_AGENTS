@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { history } = req.body;
+    const { history, systemInstruction } = req.body;
 
     if (!history || !Array.isArray(history) || history.length === 0) {
       return res.status(400).json({ error: 'Histórico vazio ou inválido.' });
@@ -18,21 +18,30 @@ export default async function handler(req, res) {
     }
 
     const modelsToTry = ["gemini-3.6-flash", "gemini-1.5-flash", "gemini-pro"];
+    let data = null;
+    let success = false;
     let lastErrorDetail = "";
 
     for (const modelName of modelsToTry) {
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
       
+      const payload = { contents: history };
+      if (systemInstruction) {
+        payload.systemInstruction = {
+          parts: [{ text: systemInstruction }]
+        };
+      }
+
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: history })
+        body: JSON.stringify(payload)
       });
 
       if (response.ok) {
-        const data = await response.json();
-        const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta gerada.";
-        return res.status(200).json({ text: responseText });
+        data = await response.json();
+        success = true;
+        break;
       } else {
         const errText = await response.text();
         lastErrorDetail = errText;
@@ -40,11 +49,15 @@ export default async function handler(req, res) {
       }
     }
 
-    // Se todos falharem, devolve o detalhe real do erro para sabermos o motivo
-    return res.status(500).json({ error: `Erro da API: ${lastErrorDetail.substring(0, 150)}` });
+    if (!success || !data) {
+      return res.status(503).json({ error: `Indisponível: ${lastErrorDetail.substring(0, 100)}` });
+    }
+
+    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta gerada.";
+    return res.status(200).json({ text: responseText });
 
   } catch (error) {
     console.error("Erro interno crítico:", error);
-    return res.status(500).json({ error: 'Falha interna no servidor da Vercel (possível excesso de tamanho de ficheiro).' });
+    return res.status(500).json({ error: 'Falha interna no servidor.' });
   }
 }
