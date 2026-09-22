@@ -4,7 +4,6 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido.' });
 
   try {
-    // Agora recebemos também o "provider" (google ou openai) da interface
     const { history, systemInstruction, provider = 'google' } = req.body;
     
     if (!history || !Array.isArray(history) || history.length === 0) {
@@ -16,7 +15,7 @@ module.exports = async function handler(req, res) {
     // ==========================================
     if (provider === 'openai') {
         const openaiKey = process.env.OPENAI_API_KEY;
-        if (!openaiKey) return res.status(500).json({ error: 'Chave OPENAI não configurada na Vercel.' });
+        if (!openaiKey) return res.status(500).json({ error: 'Chave OPENAI não detetada. Fez o Redeploy na Vercel?' });
 
         const messages = [];
         if (systemInstruction) messages.push({ role: "system", content: systemInstruction });
@@ -33,7 +32,6 @@ module.exports = async function handler(req, res) {
                 'Content-Type': 'application/json', 
                 'Authorization': `Bearer ${openaiKey}` 
             },
-            // Usamos o GPT-4o original, o mais potente da atualidade
             body: JSON.stringify({ model: 'gpt-4o', messages }) 
         });
 
@@ -49,7 +47,7 @@ module.exports = async function handler(req, res) {
     }
 
     // ==========================================
-    // 🧠 ROTA 2: GOOGLE GEMINI (Dinâmico e Blindado)
+    // 🧠 ROTA 2: GOOGLE GEMINI (3.6-flash)
     // ==========================================
     if (provider === 'google') {
         const geminiKey = process.env.GEMINI_API_KEY;
@@ -74,19 +72,9 @@ module.exports = async function handler(req, res) {
         const payload = { contents: googleContents };
         if (systemInstruction) payload.systemInstruction = { parts: [{ text: systemInstruction }] };
 
-        // Busca o modelo Gemini disponível
-        const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`);
-        if (!listRes.ok) return res.status(500).json({ error: 'Chave Gemini rejeitada.' });
-        
-        const listData = await listRes.json();
-        const validModels = listData.models.filter(m => m.supportedGenerationMethods?.includes('generateContent') && m.name.includes('gemini'));
-        if (validModels.length === 0) return res.status(500).json({ error: 'Nenhum Gemini autorizado.' });
-
-        let bestModel = validModels[0].name;
-        const preferred = validModels.find(m => m.name.includes('gemini-1.5-flash')) || validModels.find(m => m.name.includes('gemini-1.5-pro'));
-        if (preferred) bestModel = preferred.name;
-
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/${bestModel}:generateContent?key=${geminiKey}`, {
+        // Atualizado exatamente para o modelo que a Google exigiu no erro
+        const modelName = 'gemini-3.6-flash';
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
