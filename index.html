@@ -26,7 +26,6 @@
         ::-webkit-scrollbar-thumb:hover { background: #52525b; }
 
         .sidebar { width: 280px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 16px; gap: 20px; z-index: 10; }
-        
         .sidebar-header h1 { font-size: 18px; font-weight: 700; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 8px; }
         
         .btn-primary { background: var(--accent-blue); color: white; border: none; border-radius: 8px; padding: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2); display: flex; justify-content: center; align-items: center; gap: 8px;}
@@ -54,14 +53,12 @@
         .btn-clear:hover { border-color: #ef4444; color: #fca5a5; background: #ef444411; }
 
         .chat-messages { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; scroll-behavior: smooth; }
-        
         .message-wrapper { display: flex; width: 100%; justify-content: flex-start; }
         .message-wrapper.user { justify-content: flex-end; }
         .message { max-width: 85%; padding: 16px 20px; border-radius: 12px; font-size: 14.5px; line-height: 1.6; }
         .message.user { background: var(--bg-panel); border: 1px solid var(--border-color); color: #e4e4e7; border-bottom-right-radius: 4px; }
         .message.bot { background: transparent; color: #f4f4f5; width: 100%; }
 
-        /* Nova Animação do Welcome Hero e Botões */
         .welcome-hero { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; color: var(--text-secondary); animation: fadeIn 0.4s ease; }
         .welcome-hero h2 { font-size: 24px; color: #fff; margin-bottom: 10px; }
         .welcome-hero p { font-size: 14px; margin-bottom: 24px; }
@@ -117,6 +114,14 @@
         <button class="btn-primary" onclick="newChat()">+ Novo Workspace</button>
 
         <div class="form-group">
+            <label>Motor (Cérebro)</label>
+            <select id="provider-select" class="select-box" onchange="updateSession()">
+                <option value="openai">🤖 OpenAI (GPT-4o)</option>
+                <option value="google">⚡ Google (Gemini 1.5)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
             <label>Contexto Operacional</label>
             <select id="agent-select" class="select-box" onchange="updateSession()">
                 <option value="Geral">🛡️ Assistente Geral</option>
@@ -135,7 +140,7 @@
         <div class="chat-header">
             <div>
                 <h3 id="chat-title" style="font-size: 15px; font-weight: 600;">Novo Workspace</h3>
-                <span id="chat-sub" style="font-size: 12px; color: var(--text-secondary);">Sistema Operativo • Gemini 1.5</span>
+                <span id="chat-sub" style="font-size: 12px; color: var(--text-secondary);">Sistema Operativo Inteligente</span>
             </div>
             <div class="header-actions">
                 <button class="btn-export btn-clear" onclick="clearCurrentChat()">🗑️ Limpar Chat</button>
@@ -193,7 +198,6 @@
             "Dev": "És um Arquiteto de Software Sénior. Especialista em Node.js, Vercel, MCP (Model Context Protocol) e APIs. Gera código limpo."
         };
 
-        // Banco de Prompts Dinâmicos por Agente
         const dynamicPrompts = {
             "Geral": [
                 { icon: "📝", text: "Redigir e-mail formal", prompt: "Ajuda-me a escrever um e-mail corporativo comunicando uma atualização agendada na infraestrutura do sistema." },
@@ -212,8 +216,8 @@
             ]
         };
 
-        let sessions = JSON.parse(localStorage.getItem('gemini_final_sessions') || '[]');
-        let activeId = localStorage.getItem('gemini_final_active');
+        let sessions = JSON.parse(localStorage.getItem('ai_hub_v2_sessions') || '[]');
+        let activeId = localStorage.getItem('ai_hub_v2_active');
         let fileContent = "";
 
         function init() {
@@ -221,14 +225,17 @@
             else loadSession(activeId || sessions[0].id);
         }
 
-        function autoResize(el) {
-            el.style.height = 'auto';
-            el.style.height = (el.scrollHeight) + 'px';
-        }
+        function autoResize(el) { el.style.height = 'auto'; el.style.height = (el.scrollHeight) + 'px'; }
 
         function newChat() {
             const id = 'ws_' + Date.now();
-            sessions.unshift({ id, title: 'Novo Workspace', agent: document.getElementById('agent-select').value || 'Geral', history: [] });
+            sessions.unshift({ 
+                id, 
+                title: 'Novo Workspace', 
+                agent: document.getElementById('agent-select').value || 'Geral',
+                provider: document.getElementById('provider-select').value || 'openai',
+                history: [] 
+            });
             loadSession(id);
         }
 
@@ -241,19 +248,11 @@
         function renderWelcomeScreen(agent) {
             const msgDiv = document.getElementById('chat-messages');
             const prompts = dynamicPrompts[agent];
-            
-            let html = `
-                <div class="welcome-hero">
-                    <h2>Workspace: ${agent}</h2>
-                    <p>Módulo carregado com sucesso. Como posso otimizar a sua operação hoje?</p>
-                    <div class="quick-actions">`;
-            
+            let html = `<div class="welcome-hero"><h2>Workspace: ${agent}</h2><p>Módulo carregado com sucesso. Como posso otimizar a sua operação hoje?</p><div class="quick-actions">`;
             prompts.forEach(p => {
-                // Escapar aspas simples no prompt para evitar erros de JS inline
                 const safePrompt = p.prompt.replace(/'/g, "\\'");
                 html += `<button class="quick-btn" onclick="setPrompt('${safePrompt}')">${p.icon} ${p.text}</button>`;
             });
-
             html += `</div></div>`;
             msgDiv.innerHTML = html;
         }
@@ -261,8 +260,14 @@
         function loadSession(id) {
             activeId = id;
             const s = sessions.find(s => s.id === id) || sessions[0];
+            
+            // Compatibilidade com chats antigos que não tinham provider
+            if (!s.provider) s.provider = 'google'; 
+            
             document.getElementById('agent-select').value = s.agent;
+            document.getElementById('provider-select').value = s.provider;
             document.getElementById('chat-title').innerText = s.title;
+            document.getElementById('chat-sub').innerText = `${s.provider.toUpperCase()} • ${s.agent}`;
             
             if (s.history.length === 0) {
                 renderWelcomeScreen(s.agent);
@@ -283,10 +288,10 @@
         function updateSession() {
             const s = sessions.find(s => s.id === activeId);
             s.agent = document.getElementById('agent-select').value;
-            // Se o chat estiver vazio, atualiza o ecrã de boas-vindas com os novos prompts dinâmicos
-            if (s.history.length === 0) {
-                renderWelcomeScreen(s.agent);
-            }
+            s.provider = document.getElementById('provider-select').value;
+            document.getElementById('chat-sub').innerText = `${s.provider.toUpperCase()} • ${s.agent}`;
+            
+            if (s.history.length === 0) renderWelcomeScreen(s.agent);
             save();
         }
 
@@ -349,7 +354,11 @@
                 const res = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ history: tempHistory, systemInstruction: personas[s.agent] })
+                    body: JSON.stringify({ 
+                        history: tempHistory, 
+                        systemInstruction: personas[s.agent],
+                        provider: s.provider
+                    })
                 });
                 
                 const data = await res.json();
@@ -360,7 +369,7 @@
                     s.history.push({ role: 'model', parts: [{ text: data.text }] });
                     renderMessage(data.text, 'bot');
                 } else {
-                    renderMessage(`⚠️ **Atenção:** ${data.error}`, 'bot');
+                    renderMessage(`⚠️ **Atenção (${s.provider.toUpperCase()}):** ${data.error}`, 'bot');
                 }
                 save();
             } catch (err) {
@@ -391,8 +400,8 @@
         }
 
         function save() {
-            localStorage.setItem('gemini_final_sessions', JSON.stringify(sessions));
-            localStorage.setItem('gemini_final_active', activeId);
+            localStorage.setItem('ai_hub_v2_sessions', JSON.stringify(sessions));
+            localStorage.setItem('ai_hub_v2_active', activeId);
             renderList();
         }
 
