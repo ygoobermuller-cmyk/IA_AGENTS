@@ -17,7 +17,6 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Chave API não configurada.' });
     }
 
-    // Lista de modelos a tentar por ordem de preferência
     const modelsToTry = ["gemini-3.6-flash", "gemini-1.5-flash", "gemini-pro"];
     let data = null;
     let success = false;
@@ -42,7 +41,7 @@ export default async function handler(req, res) {
     }
 
     if (!success || !data) {
-      return res.status(503).json({ error: 'Todos os modelos estão temporariamente sobrecarregados. Tente novamente em instantes.' });
+      return res.status(503).json({ error: 'Todos os modelos estão temporariamente sobrecarregados. Tente novamente.' });
     }
 
     const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta.";
